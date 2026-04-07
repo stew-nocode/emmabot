@@ -1,0 +1,55 @@
+<!-- Emma widget embed snippet (copier-coller) -->
+<!-- À placer dans le <head> (ou juste avant </body>) -->
+<script src="https://stew-nocode.github.io/emmabot/emma-widget.js"></script>
+
+<script>
+  EmmaChat.init({
+    // ── Connexion (OBLIGATOIRE) ──
+    webhookUrl:   "https://n8n.srv1336912.hstgr.cloud/webhook/e239be12-d954-4ebf-92e1-d9fca1cbdcca/chat",
+    webhookRoute: "general",
+
+    // ── Sécurité (RECOMMANDÉ) ──
+    // ⚠️ Si ce snippet est exécuté côté navigateur, ce secret sera visible.
+    // Pour une vraie sécurité, passer par un endpoint backend qui ajoute ce header.
+    webhookHeaders: {
+      "X-Emma-Secret": "A_REMPLACER_PAR_VOTRE_SECRET"
+    },
+
+    // ── Session (ATTENDU) ──
+    // "browser" (défaut) = 1 session par navigateur (persistée)
+    // "tab" = 1 session par onglet
+    // "conversation" = nouvelle session à chaque démarrage
+    sessionScope: "browser",
+
+    // ── Agent / Branding (OPTIONNEL) ──
+    agentName:   "Emma",
+    agentStatus: "En ligne",
+    logoUrl:     "https://votre-domaine.com/logo.png",
+
+    // ── Textes (OPTIONNEL) ──
+    welcomeText:      "Bonjour ! Comment puis-je vous aider ?",
+    buttonText:       "Démarrer la conversation",
+    responseTimeText: "Réponse en quelques secondes.",
+    inputPlaceholder: "Écrivez votre question...",
+
+    // ── Questions rapides (OPTIONNEL) ──
+    suggestions: [
+      "Comment calculer la paie ?",
+      "Comment enregistrer un bon de commande ?",
+      "Comment générer des états financiers ?"
+    ],
+
+    // ── Design (OPTIONNEL) ──
+    primaryColor: "#3B5BDB",
+    position:     "right",
+    widgetWidth:  380,
+    widgetHeight: 580,
+    autoOpen:     false,
+
+    // ── Callbacks (OPTIONNEL) ──
+    onOpen:    () => console.log("Widget ouvert"),
+    onClose:   () => console.log("Widget fermé"),
+    onMessage: (msg) => console.log("[EmmaChat]", msg.role, ":", msg.text)
+  });
+</script>
+

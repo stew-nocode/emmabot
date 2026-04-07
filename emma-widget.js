@@ -8,6 +8,17 @@
   const DEFAULTS = {
     webhookUrl: '',
     webhookRoute: 'general',
+    // Optional request hardening / sessioning
+    // webhookHeaders: extra headers added to the fetch() call (e.g. { "X-Emma-Secret": "..." })
+    webhookHeaders: {},
+    // sessionId: custom session id string. If omitted, the widget will generate one and persist it in localStorage.
+    sessionId: null,
+    // sessionScope:
+    // - "browser" (default): one session per browser (persisted in localStorage)
+    // - "tab": one session per tab (persisted in sessionStorage)
+    // - "conversation": new session each time the widget is started (not persisted)
+    sessionScope: 'browser',
+    sessionStorageKey: 'emma_chat_session_id',
     agentName: 'Emma',
     agentStatus: 'En ligne',
     logoUrl: 'https://i.postimg.cc/NGSs02yS/des.png',
@@ -26,6 +37,48 @@
     onClose: null,
     onMessage: null,
   };
+
+  function safeGetLocalStorage() {
+    try {
+      return global.localStorage || null;
+    } catch {
+      return null;
+    }
+  }
+
+  function safeGetSessionStorage() {
+    try {
+      return global.sessionStorage || null;
+    } catch {
+      return null;
+    }
+  }
+
+  function createSessionId() {
+    try {
+      if (global.crypto && typeof global.crypto.randomUUID === 'function') return global.crypto.randomUUID();
+    } catch {}
+    // Fallback: timestamp + random
+    return `sess_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  }
+
+  function resolveSessionId(cfg, opts) {
+    if (cfg.sessionId && String(cfg.sessionId).trim()) return String(cfg.sessionId).trim();
+    const scope = (cfg.sessionScope || 'browser').toLowerCase();
+
+    // conversation scope: always new (unless explicitly overridden by cfg.sessionId)
+    if (scope === 'conversation' || (opts && opts.forceNew)) return createSessionId();
+
+    const storage = scope === 'tab' ? safeGetSessionStorage() : safeGetLocalStorage();
+    if (!storage) return createSessionId();
+
+    const existing = storage.getItem(cfg.sessionStorageKey);
+    if (existing && existing.trim()) return existing.trim();
+
+    const fresh = createSessionId();
+    storage.setItem(cfg.sessionStorageKey, fresh);
+    return fresh;
+  }
 
   // ── CSS injection ──
   function injectStyles(primaryColor, position, launcherSize) {
@@ -202,6 +255,8 @@
 
   // ── Build HTML ──
   function buildWidget(cfg) {
+    let sessionId = resolveSessionId(cfg);
+
     // Launcher
     const launcher = document.createElement('button');
     launcher.id = 'emma-launcher';
@@ -303,6 +358,9 @@
       if (typeof cfg.onClose === 'function') cfg.onClose();
     }
     function startChat() {
+      if (String(cfg.sessionScope || '').toLowerCase() === 'conversation') {
+        sessionId = resolveSessionId(cfg, { forceNew: true });
+      }
       widget.querySelector('#emma-welcome').style.display = 'none';
       widget.querySelector('#emma-chat').classList.add('active');
       renderChips();
@@ -338,10 +396,20 @@
       const thinkingEl = addThinking();
 
       try {
+        const extraHeaders =
+          cfg.webhookHeaders && typeof cfg.webhookHeaders === 'object' && !Array.isArray(cfg.webhookHeaders)
+            ? cfg.webhookHeaders
+            : {};
+
         const res = await fetch(cfg.webhookUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'sendMessage', chatInput: text, route: cfg.webhookRoute })
+          headers: { 'Content-Type': 'application/json', ...extraHeaders },
+          body: JSON.stringify({
+            action: 'sendMessage',
+            chatInput: text,
+            route: cfg.webhookRoute,
+            sessionId,
+          })
         });
 
         const contentType = res.headers.get('content-type') || '';
