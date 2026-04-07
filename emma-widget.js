@@ -202,6 +202,9 @@
 
   // ── Build HTML ──
   function buildWidget(cfg) {
+    // Générer un sessionId unique pour cette session
+    const sessionId = 'emma-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    
     // Launcher
     const launcher = document.createElement('button');
     launcher.id = 'emma-launcher';
@@ -341,7 +344,7 @@
         const res = await fetch(cfg.webhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'sendMessage', chatInput: text, route: cfg.webhookRoute })
+          body: JSON.stringify({ action: 'sendMessage', chatInput: text, route: cfg.webhookRoute, sessionId: sessionId })
         });
 
         const contentType = res.headers.get('content-type') || '';
