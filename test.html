@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Emma Widget</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: #f8f9fb;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      color: #1a1a2e;
+    }
+    h1 { font-size: 24px; font-weight: 600; }
+    p { font-size: 15px; color: #6b7280; }
+    .btn {
+      background: #3B5BDB; color: #fff; border: none;
+      border-radius: 12px; padding: 12px 28px;
+      font-size: 15px; font-weight: 500; font-family: inherit;
+      cursor: pointer; transition: opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.88; }
+    .btn-outline {
+      background: none; color: #3B5BDB;
+      border: 1.5px solid #3B5BDB;
+      border-radius: 12px; padding: 12px 28px;
+      font-size: 15px; font-weight: 500; font-family: inherit;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .btn-outline:hover { background: #EEF0F5; }
+    .actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+    .badge {
+      background: #EEF0F5; color: #3B5BDB;
+      border-radius: 20px; padding: 4px 14px;
+      font-size: 13px; font-weight: 500;
+    }
+  </style>
+
+  <!-- ① Charger le widget -->
+  <script src="emma-widget.js"></script>
+</head>
+<body>
+
+  <span class="badge">Page de démonstration</span>
+  <h1>Test du widget Emma</h1>
+  <p>Le chatbot est actif en bas à droite. Vous pouvez aussi le contrôler via les boutons.</p>
+
+  <div class="actions">
+    <button class="btn" onclick="EmmaChat.open()">Ouvrir le chat</button>
+    <button class="btn-outline" onclick="EmmaChat.close()">Fermer le chat</button>
+    <button class="btn-outline" onclick="EmmaChat.toggle()">Toggle</button>
+  </div>
+
+  <!-- ② Initialiser le widget -->
+  <script>
+    EmmaChat.init({
+      webhookUrl:       'https://n8n.srv810771.hstgr.cloud/webhook/bb149874-eb95-4fd6-8457-7dad0db0062b/chat',
+      webhookRoute:     'general',
+      agentName:        'Emma',
+      agentStatus:      'En ligne',
+      logoUrl:          'https://i.postimg.cc/NGSs02yS/des.png',
+      welcomeText:      'Bonjour ! Comment puis-je vous aider ?',
+      buttonText:       'Poser une question',
+      responseTimeText: 'Nous traitons rapidement vos préoccupations.',
+      inputPlaceholder: 'Ecrivez votre question...',
+      suggestions: [
+        'Comment calculer la paie?',
+        'Comment enregistrer un bon de commande?',
+        'Comment générer des états financiers?',
+      ],
+      primaryColor: '#3B5BDB',
+      position:     'right',
+      widgetWidth:  380,
+      widgetHeight: 580,
+      autoOpen:     false,
+      onOpen:    () => console.log('Widget ouvert'),
+      onClose:   () => console.log('Widget fermé'),
+      onMessage: (msg) => console.log('[EmmaChat]', msg.role, ':', msg.text),
+    });
+  </script>
+
+</body>
+</html>
