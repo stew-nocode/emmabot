@@ -1,6 +1,10 @@
-# Déploie le dossier du site (dont index.html + emma-widget.js) sur GitHub Pages.
-# Génère local.config.js au build à partir du secret EMMA_SECRET (non versionné).
-# Prérequis : Settings → Pages → Build : GitHub Actions (pas « Deploy from branch »).
+# Déploie le site (index.html, emma-widget.js, etc.) sur GitHub Pages.
+# Génère local.config.js au build à partir du secret EMMA_SECRET (jamais commité).
+# Prérequis : Settings → Pages → Source : GitHub Actions.
+#
+# Secret EMMA_SECRET — une des deux options (le plus simple = 1) :
+#   1) Settings → Secrets and variables → Actions → Repository secrets → EMMA_SECRET
+#   2) Settings → Environments → github-pages → Environment secrets → EMMA_SECRET
 
 name: Deploy GitHub Pages
 
@@ -28,12 +32,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Generate local.config.js from secret
+      - name: Generate local.config.js from EMMA_SECRET
         env:
           EMMA_SECRET: ${{ secrets.EMMA_SECRET }}
         run: |
-          if [ -z "$EMMA_SECRET" ]; then
-            echo "::error::Secret EMMA_SECRET est absent. Ajoutez-le dans Settings → Secrets → Actions du dépôt."
+          if [ -z "${EMMA_SECRET:-}" ]; then
+            echo '::error title=Secret manquant::EMMA_SECRET est vide ou absent.'
+            echo '::error::Ajoutez un secret nommé exactement EMMA_SECRET :'
+            echo '::error::  • (recommandé) Repo → Settings → Secrets and variables → Actions → New repository secret'
+            echo '::error::  • (alternative) Settings → Environments → github-pages → Environment secrets'
+            echo '::error::Puis relancez ce workflow (Re-run jobs).'
             exit 1
           fi
           node <<'NODE'
@@ -51,13 +59,19 @@ jobs:
           fs.writeFileSync('local.config.js', body, 'utf8');
           NODE
 
+      - name: Préparer le dossier publié (_site)
+        run: |
+          mkdir -p _site
+          cp index.html emma-widget.js EMBED_SNIPPET.html README.md local.config.example.js local.config.js _site/
+          : > _site/.nojekyll
+
       - name: Configure Pages
         uses: actions/configure-pages@v4
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
 
       - name: Deploy to GitHub Pages
         id: deployment

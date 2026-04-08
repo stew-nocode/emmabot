@@ -44,14 +44,26 @@ Les en-têtes HTTP ne sont en général **pas** disponibles dans `$json.headers`
 
 Objectif : faire tester le chat sur `https://<user>.github.io/emmabot/` **avant** intégration par les devs, sans copier `local.config.js` sur chaque poste.
 
-1. **Secret du dépôt** : dans GitHub → **Settings → Secrets and variables → Actions** → **New repository secret**  
-   - Nom : `EMMA_SECRET`  
-   - Valeur : **la même** que celle attendue par N8N (`X-Emma-Secret` / `emmaSecret`).
+1. **Secret `EMMA_SECRET` (obligatoire pour que le workflow réussisse)**  
+   **Méthode recommandée** — secret au niveau du dépôt :  
+   **Settings → Secrets and variables → Actions** → onglet **Secrets** → **New repository secret**  
+   - Name : `EMMA_SECRET` (exactement, respecter la casse)  
+   - Secret : la **même valeur** que dans N8N (`X-Emma-Secret` / `emmaSecret`).  
 
-2. **Source Pages** : **Settings → Pages** → **Build and deployment** → Source : **GitHub Actions** (et plus « Deploy from a branch » si vous basculez entièrement sur ce workflow).
+   **Alternative** : **Settings → Environments → `github-pages` → Environment secrets** → ajouter `EMMA_SECRET`.  
+   Si le workflow affiche encore « secret absent », utilise surtout la **méthode recommandée** (Actions du dépôt).
 
-3. **Déploiement** : pousser sur `main` (ou lancer manuellement le workflow **Deploy GitHub Pages**). Le job génère `local.config.js` **uniquement dans l’artefact** publié ; le fichier reste ignoré par Git.
+2. **Source Pages** : **Settings → Pages** → **Build and deployment** → Source : **GitHub Actions**. Ne pas cliquer sur « Configure » pour Jekyll / Static HTML : le workflow **Deploy GitHub Pages** est déjà dans `.github/workflows/deploy-pages.yml`.
+
+3. **Déploiement** : onglet **Actions** → **Deploy GitHub Pages** → **Run workflow** (ou push sur `main`). Après un échec, une fois le secret ajouté : **Re-run all jobs**.  
+   Le site publié est construit dans un dossier `_site` (sans exposer `.github/` sur Pages). `local.config.js` n’est **pas** commité dans Git.
 
 4. **Lien à transmettre** : `https://stew-nocode.github.io/emmabot/` (adapter si le compte ou le repo change).
+
+### Si le workflow est rouge (« EMMA_SECRET absent »)
+
+- Vérifier que le secret s’appelle bien **`EMMA_SECRET`** (pas `EMMA_SECRETS`, pas d’espace).  
+- Le créer sous **Secrets and variables → Actions** (repository secret), pas seulement sous Dependabot / Codespaces.  
+- Relancer le workflow.
 
 **Limite importante** : le secret finit dans le JavaScript servi au navigateur. Toute personne qui ouvre l’URL peut le retrouver (Outils de développement). Réservez l’URL à un **usage interne** et prévoyez plus tard un **proxy serveur** côté appli pour la prod si le périmètre N8N est sensible.
