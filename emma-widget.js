@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  const EMMA_WIDGET_VERSION = '0.2.1';
+  const EMMA_WIDGET_VERSION = '0.2.2';
 
   // ── Already loaded guard ──
   if (global.EmmaChat) return;
@@ -289,6 +289,31 @@
       }
     }
 
+    /** Extrait un morceau de texte depuis une ligne/chunk JSON (n8n, NDJSON, SSE, OpenAI-like). */
+    function extractStreamDelta(parsed) {
+      if (!parsed || typeof parsed !== 'object') return '';
+      if (parsed.type === 'item' && typeof parsed.content === 'string') return parsed.content;
+      if (typeof parsed.content === 'string' && parsed.type !== 'begin' && parsed.type !== 'end') {
+        return parsed.content;
+      }
+      const fromFields = extractReplyFromJson(parsed);
+      if (fromFields) return fromFields;
+      if (parsed.delta) {
+        if (typeof parsed.delta.content === 'string') return parsed.delta.content;
+        if (typeof parsed.delta.text === 'string') return parsed.delta.text;
+      }
+      if (parsed.message && typeof parsed.message.content === 'string') return parsed.message.content;
+      return '';
+    }
+
+    function normalizeStreamLine(line) {
+      let s = String(line).trim();
+      if (!s) return '';
+      if (s.startsWith('data:')) s = s.slice(5).trim();
+      if (s === '[DONE]') return '';
+      return s;
+    }
+
     // Launcher
     const launcher = document.createElement('button');
     launcher.id = 'emma-launcher';
@@ -520,6 +545,7 @@
         const decoder = new TextDecoder();
         let fullText = '';
         let rawBuf = '';
+        let lineBuf = '';
         thinkingEl.remove();
         const botDiv = addBotMessageEl('');
         while (true) {
@@ -527,19 +553,48 @@
           if (done) break;
           const chunk = decoder.decode(value, { stream: true });
           rawBuf += chunk;
-          chunk.split('\n').filter(l => l.trim()).forEach(line => {
+          lineBuf += chunk;
+          const lines = lineBuf.split(/\r?\n/);
+          lineBuf = lines.pop() || '';
+          for (let i = 0; i < lines.length; i++) {
+            const norm = normalizeStreamLine(lines[i]);
+            if (!norm) continue;
             try {
-              const parsed = JSON.parse(line);
-              if (parsed.type === 'item' && parsed.content) {
-                fullText += parsed.content;
+              const parsed = JSON.parse(norm);
+              const delta = extractStreamDelta(parsed);
+              if (delta) {
+                fullText += delta;
                 botDiv.innerHTML = formatMessage(fullText);
                 scrollBottom();
               }
-            } catch {}
-          });
+            } catch (_) {}
+          }
+        }
+        const tail = normalizeStreamLine(lineBuf);
+        if (tail) {
+          try {
+            const parsed = JSON.parse(tail);
+            const delta = extractStreamDelta(parsed);
+            if (delta) {
+              fullText += delta;
+              botDiv.innerHTML = formatMessage(fullText);
+              scrollBottom();
+            }
+          } catch (_) {}
         }
         if (!fullText && rawBuf.trim()) {
-          const fallback = tryParseJsonReply(rawBuf.trim());
+          let fallback = tryParseJsonReply(rawBuf.trim());
+          if (!fallback) {
+            let acc = '';
+            rawBuf.split(/\r?\n/).forEach(l => {
+              const norm = normalizeStreamLine(l);
+              if (!norm) return;
+              try {
+                acc += extractStreamDelta(JSON.parse(norm));
+              } catch (_) {}
+            });
+            fallback = acc;
+          }
           if (fallback) {
             fullText = fallback;
             botDiv.innerHTML = formatMessage(fullText);
