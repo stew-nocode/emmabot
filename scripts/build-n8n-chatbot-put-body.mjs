@@ -10,9 +10,14 @@ import {
   applyPostgresChatMemoryWindow,
   DEFAULT_POSTGRES_CONTEXT_WINDOW,
 } from './chatbot-memory-config.mjs';
+import {
+  applyVectorStoreRagMetadataFilters,
+  RAG_TOOL_DESCRIPTION,
+} from './chatbot-rag-metadata.mjs';
 
 const args = process.argv.slice(2);
 const useLightChain = args.includes('--light-chain');
+const useRagMetadataFilters = !args.includes('--no-rag-metadata-filters');
 let memoryWindow = DEFAULT_POSTGRES_CONTEXT_WINDOW;
 const mwIdx = args.indexOf('--memory-window');
 if (mwIdx !== -1 && args[mwIdx + 1] != null && !String(args[mwIdx + 1]).startsWith('--')) {
@@ -24,6 +29,7 @@ const positional = [];
 for (let i = 0; i < args.length; i++) {
   const a = args[i];
   if (a === '--light-chain') continue;
+  if (a === '--no-rag-metadata-filters') continue;
   if (a === '--memory-window') {
     i++;
     continue;
@@ -34,7 +40,7 @@ for (let i = 0; i < args.length; i++) {
 const srcPath = positional[0];
 if (!srcPath) {
   console.error(
-    'Usage: node build-n8n-chatbot-put-body.mjs <workflow.json> [--light-chain] [--memory-window N]',
+    'Usage: node build-n8n-chatbot-put-body.mjs <workflow.json> [--light-chain] [--memory-window N] [--no-rag-metadata-filters]',
   );
   process.exit(1);
 }
@@ -56,6 +62,12 @@ Je transmets immédiatement votre préoccupation au support qui vous reprendra r
 - Question générale sur ton rôle (« que sais-tu faire ? ») sans détail métier.
 - Relance conversationnelle d'une réponse déjà donnée dans l'historique récent (sans nouveau sujet OBC).
 En cas de doute sur le besoin métier : **appeler l'outil**.
+
+# Filtre RAG (optionnel)
+- L'outil de recherche accepte des indications **module** et **produit** quand la question le permet ; sinon laisser vides pour une recherche large.
+- **module** (une valeur) : RH, Opérations, Finance, Projet, Paiement, CRM, Global.
+- **produit** : OBC, SNI, Credit Factory seulement si la question le mentionne clairement.
+- Ne pas inventer module ou produit pour forcer un filtre.
 
 # Langue et ton
 - Langue de l'utilisateur (français par défaut).
@@ -82,15 +94,17 @@ Fournir la procédure correcte issue de la base et préciser où l'erreur survie
 - « Global », « Administration Système » : paramétrage global de l'ERP, pas des sous-modules OBC.
 - Achat & vente n'est pas un module. N'invente rien.`;
 
-const newToolDescription = `Retrieve OBC ERP procedures and features from the knowledge base. Use it for any business question about OBC (screens, steps, modules). Do not call for standalone greetings or thanks without a concrete OBC question; when in doubt, call this tool.`;
-
 for (const node of w.nodes) {
   if (node.name === 'AI Agent' && node.parameters?.options) {
     node.parameters.options.systemMessage = newSystemMessage;
   }
   if (node.name === 'Supabase Vector Store' && node.parameters?.mode === 'retrieve-as-tool') {
-    node.parameters.toolDescription = newToolDescription;
+    node.parameters.toolDescription = RAG_TOOL_DESCRIPTION;
   }
+}
+
+if (useRagMetadataFilters) {
+  applyVectorStoreRagMetadataFilters(w);
 }
 
 applyPostgresChatMemoryWindow(w, memoryWindow);
@@ -109,5 +123,5 @@ const body = {
 
 fs.writeFileSync(new URL('../.n8n_put_chatbot_body.json', import.meta.url), JSON.stringify(body), 'utf8');
 console.log(
-  `Wrote emmabot/.n8n_put_chatbot_body.json (Postgres Chat Memory contextWindowLength=${memoryWindow})`,
+  `Wrote emmabot/.n8n_put_chatbot_body.json (memoryWindow=${memoryWindow}, ragMetadataFilters=${useRagMetadataFilters})`,
 );

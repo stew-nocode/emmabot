@@ -2,11 +2,12 @@
 
 Workflow cible : **chatbot** (trigger *When chat message received*, agent + Supabase Vector Store, mémoire Postgres).
 
-## 1. Supabase — `match_documents`
+## 1. Supabase — `match_documents` + métadonnées RAG
 
-1. Ouvrir **SQL Editor** (ou MCP Supabase) et exécuter le script  
-   `supabase/match_documents.sql` à la racine de ce repo.
-2. Vérifier que le nœud **Supabase Vector Store** envoie bien un `filter` JSON si vous segmentez par `metadata` (sinon `{}` = comportement inchangé).
+1. Exécuter `supabase/match_documents.sql` (filtre `metadata` avec `@>`, ignore les clés vides).
+2. Enrichir les chunks : voir **`n8n/RAG_METADATA.md`** (clés `module`, `produit`, ingestion).
+3. Le script de build configure le **Supabase Vector Store** avec `$fromAI` sur ces champs ; désactiver avec `--no-rag-metadata-filters` si besoin.
+4. (Optionnel) Index GIN : `supabase/documents_metadata_gin.sql`.
 
 ## 2. Routage outil — réduire les appels RAG inutiles
 
