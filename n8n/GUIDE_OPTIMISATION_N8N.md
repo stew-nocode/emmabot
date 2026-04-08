@@ -44,8 +44,8 @@ En cas de doute : appeler l’outil (meilleure couverture qu’un refus à tort)
 
 ## 6. Mémoire Postgres
 
-- Dans **Postgres Chat Memory** (n8n ≥ 1.1), renseigner **Context Window Length** (`contextWindowLength` dans l’export JSON) : c’est la fenêtre **BufferWindow** (échanges récents envoyés au modèle). Valeur appliquée par le script de build par défaut : **12** (ajustable avec `--memory-window N`).
-- Plus la valeur est basse, plus les longues conversations restent rapides et légères en tokens ; si le bot perd le fil du sujet, monter vers **16–20**.
+- Dans **Postgres Chat Memory** (n8n ≥ 1.1), renseigner **Context Window Length** (`contextWindowLength` dans l’export JSON) : c’est la fenêtre **BufferWindow** (échanges récents envoyés au modèle). Le script de build impose par défaut **8** (ajustable avec `--memory-window N`).
+- Plus la valeur est basse, plus les longues conversations restent rapides et légères en tokens ; si le bot perd le fil du sujet, monter vers **12–16** (voire **20** si besoin).
 - Conserver `sessionKey` = `{{ $json.sessionId }}` (aligné widget).
 
 ## 7. Chaîne n8n — chemin critique
