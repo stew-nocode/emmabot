@@ -45,6 +45,8 @@
 
   <!-- ① Charger le widget -->
   <script src="emma-widget.js"></script>
+  <!-- Config locale (secret N8N) : copier local.config.example.js → local.config.js (non versionné) -->
+  <script src="local.config.js"></script>
 </head>
 <body>
 
@@ -60,11 +62,9 @@
 
   <!-- ② Initialiser le widget -->
   <script>
-    EmmaChat.init({
+    EmmaChat.init(Object.assign({
       webhookUrl:       'https://n8n.srv1336912.hstgr.cloud/webhook/e239be12-d954-4ebf-92e1-d9fca1cbdcca/chat',
       webhookRoute:     'general',
-      // Si ton workflow N8N vérifie X-Emma-Secret, décommente et mets le même secret que dans n8n :
-      // webhookHeaders: { 'X-Emma-Secret': 'TON_SECRET' },
       agentName:        'Emma',
       agentStatus:      'En ligne',
       logoUrl:          'https://i.postimg.cc/NGSs02yS/des.png',
@@ -85,7 +85,7 @@
       onOpen:    () => console.log('Widget ouvert'),
       onClose:   () => console.log('Widget fermé'),
       onMessage: (msg) => console.log('[EmmaChat]', msg.role, ':', msg.text),
-    });
+    }, window.__EMMA_LOCAL_CONFIG || {}));
   </script>
 
 </body>

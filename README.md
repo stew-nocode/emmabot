@@ -4,6 +4,12 @@
 
 Copier-coller le snippet dans `EMBED_SNIPPET.html`.
 
+### Démo locale (`index.html`) + secret N8N
+
+1. Copier `local.config.example.js` → `local.config.js` (déjà ignoré par Git).
+2. Dans `local.config.js`, remplacer le secret par **la même valeur** que dans ton nœud N8N (`X-Emma-Secret`).
+3. Lancer un serveur statique à la racine du repo (ex. `npx serve` depuis `Chatbot/`) et ouvrir `/emmabot/`.
+
 ### Paramètres à configurer
 
 - **`webhookUrl`** : URL du webhook N8N
