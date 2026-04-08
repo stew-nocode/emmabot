@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  const EMMA_WIDGET_VERSION = '0.3.4';
+  const EMMA_WIDGET_VERSION = '0.3.5';
 
   // ── Already loaded guard ──
   if (global.EmmaChat) return;
@@ -163,7 +163,9 @@
         background:#fff; border-radius:20px;
         box-shadow:0 8px 48px rgba(0,0,0,0.14),0 2px 8px rgba(0,0,0,0.06);
         display:flex; flex-direction:column; overflow:hidden;
-        z-index:2147483645; font-family:'DM Sans',system-ui,sans-serif;
+        z-index:2147483645;
+        font-family:'Inter',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+        font-feature-settings:'kern' 1,'liga' 1;
         transform:scale(0.94) translateY(18px); opacity:0; pointer-events:none;
         transition:transform .28s cubic-bezier(.34,1.56,.64,1),opacity .22s ease;
       }
@@ -240,8 +242,8 @@
       .emma-bot-name-label { font-size:11px; color:#9098A3; padding-left:4px; letter-spacing:0.02em; }
       .emma-msg-bot {
         background:#fff; border-radius:20px 20px 20px 6px;
-        padding:16px 18px 17px; font-size:14px; color:#1a1a2e;
-        line-height:1.68; letter-spacing:0.01em;
+        padding:16px 18px 17px; font-size:15px; color:#1f2937;
+        line-height:1.72; letter-spacing:0;
         max-width:100%; width:fit-content; box-sizing:border-box;
         box-shadow:0 1px 3px rgba(0,0,0,0.05), 0 4px 20px rgba(0,0,0,0.04);
         animation:emmaMsgIn .2s ease;
@@ -249,12 +251,12 @@
       }
       .emma-msg-content { display:block; }
       .emma-msg-content .emma-msg-p {
-        margin:0 0 0.85em; line-height:1.68;
+        margin:0 0 0.85em; line-height:1.72;
       }
       .emma-msg-content .emma-msg-p:last-child { margin-bottom:0; }
       .emma-msg-content .emma-msg-p + .emma-msg-p { margin-top:0.35em; }
       .emma-msg-lead {
-        display:block; font-weight:600; font-size:15px; line-height:1.45;
+        display:block; font-weight:600; font-size:16px; line-height:1.45;
         color:#111827; margin:0 0 0.55em;
       }
       .emma-msg-sep {
@@ -265,8 +267,8 @@
       .emma-user-label { font-size:11px; color:#9098A3; padding-right:2px; }
       .emma-msg-user {
         background:${pc}; border-radius:20px 20px 6px 20px;
-        padding:14px 18px; font-size:14px; color:#fff;
-        line-height:1.65; max-width:min(100%, 300px); box-sizing:border-box;
+        padding:14px 18px; font-size:15px; color:#fff;
+        line-height:1.72; max-width:min(100%, 300px); box-sizing:border-box;
         word-wrap:break-word;
         animation:emmaMsgIn .2s ease;
       }
@@ -328,7 +330,7 @@
       }
       .emma-input-area input {
         flex:1; border:none; outline:none;
-        font-size:14px; font-family:inherit;
+        font-size:15px; font-family:inherit;
         color:#1a1a2e; background:transparent; padding:4px 0;
       }
       .emma-input-area input::placeholder { color:#B8BCC8; }
@@ -359,11 +361,12 @@
     style.textContent = css;
     document.head.appendChild(style);
 
-    // Load DM Sans font
-    if (!document.querySelector('link[href*="DM+Sans"]')) {
+    // Inter : lisibilité forte pour le chat (UI / longues réponses)
+    if (!document.querySelector('link[data-emma-font="1"]')) {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap';
+      link.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap';
+      link.setAttribute('data-emma-font', '1');
       document.head.appendChild(link);
     }
   }
