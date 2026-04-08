@@ -19,6 +19,9 @@
     // - "conversation": new session each time the widget is started (not persisted)
     sessionScope: 'browser',
     sessionStorageKey: 'emma_chat_session_id',
+    // requestTimeoutMs: max wait for the whole request (headers + streaming body). 0 = disabled.
+    requestTimeoutMs: 90000,
+    timeoutMessage: 'Délai dépassé. Veuillez réessayer dans un instant.',
     agentName: 'Emma',
     agentStatus: 'En ligne',
     logoUrl: 'https://i.postimg.cc/NGSs02yS/des.png',
@@ -395,6 +398,13 @@
       if (typeof cfg.onMessage === 'function') cfg.onMessage({ role: 'user', text });
       const thinkingEl = addThinking();
 
+      const controller = new AbortController();
+      let timeoutId = null;
+      const timeoutMs = Number(cfg.requestTimeoutMs);
+      if (timeoutMs > 0 && !Number.isNaN(timeoutMs)) {
+        timeoutId = global.setTimeout(() => controller.abort(), timeoutMs);
+      }
+
       try {
         const extraHeaders =
           cfg.webhookHeaders && typeof cfg.webhookHeaders === 'object' && !Array.isArray(cfg.webhookHeaders)
@@ -409,7 +419,8 @@
             chatInput: text,
             route: cfg.webhookRoute,
             sessionId,
-          })
+          }),
+          signal: controller.signal,
         });
 
         const contentType = res.headers.get('content-type') || '';
@@ -443,9 +454,16 @@
           if (!fullText) botDiv.textContent = 'Aucune réponse reçue.';
           if (typeof cfg.onMessage === 'function') cfg.onMessage({ role: 'bot', text: fullText });
         }
-      } catch {
+      } catch (e) {
         thinkingEl.remove();
-        addBotMessage('Une erreur est survenue. Veuillez réessayer.');
+        const aborted = e && (e.name === 'AbortError' || e.name === 'TimeoutError');
+        if (aborted) {
+          addBotMessage(cfg.timeoutMessage || 'Délai dépassé. Veuillez réessayer dans un instant.');
+        } else {
+          addBotMessage('Une erreur est survenue. Veuillez réessayer.');
+        }
+      } finally {
+        if (timeoutId) global.clearTimeout(timeoutId);
       }
     }
     function addUserMessage(text) {
