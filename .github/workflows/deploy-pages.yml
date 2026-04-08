@@ -1,0 +1,64 @@
+# Déploie le dossier du site (dont index.html + emma-widget.js) sur GitHub Pages.
+# Génère local.config.js au build à partir du secret EMMA_SECRET (non versionné).
+# Prérequis : Settings → Pages → Build : GitHub Actions (pas « Deploy from branch »).
+
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate local.config.js from secret
+        env:
+          EMMA_SECRET: ${{ secrets.EMMA_SECRET }}
+        run: |
+          if [ -z "$EMMA_SECRET" ]; then
+            echo "::error::Secret EMMA_SECRET est absent. Ajoutez-le dans Settings → Secrets → Actions du dépôt."
+            exit 1
+          fi
+          node <<'NODE'
+          const fs = require('fs');
+          const s = process.env.EMMA_SECRET;
+          const cfg = {
+            webhookHeaders: { 'X-Emma-Secret': s },
+            sharedSecret: s,
+          };
+          const body =
+            '// Généré par GitHub Actions au déploiement. Ne pas commiter.\n' +
+            'window.__EMMA_LOCAL_CONFIG = ' +
+            JSON.stringify(cfg, null, 2) +
+            ';\n';
+          fs.writeFileSync('local.config.js', body, 'utf8');
+          NODE
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

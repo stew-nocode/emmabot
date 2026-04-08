@@ -40,3 +40,18 @@ Les en-têtes HTTP ne sont en général **pas** disponibles dans `$json.headers`
 - `const got = ($json.headers?.['x-emma-secret'] || $json.headers?.['X-Emma-Secret'] || $json.emmaSecret);`
 - Compare `got` à la valeur attendue comme avant.
 
+## Démo GitHub Pages pour les responsables (sans installation locale)
+
+Objectif : faire tester le chat sur `https://<user>.github.io/emmabot/` **avant** intégration par les devs, sans copier `local.config.js` sur chaque poste.
+
+1. **Secret du dépôt** : dans GitHub → **Settings → Secrets and variables → Actions** → **New repository secret**  
+   - Nom : `EMMA_SECRET`  
+   - Valeur : **la même** que celle attendue par N8N (`X-Emma-Secret` / `emmaSecret`).
+
+2. **Source Pages** : **Settings → Pages** → **Build and deployment** → Source : **GitHub Actions** (et plus « Deploy from a branch » si vous basculez entièrement sur ce workflow).
+
+3. **Déploiement** : pousser sur `main` (ou lancer manuellement le workflow **Deploy GitHub Pages**). Le job génère `local.config.js` **uniquement dans l’artefact** publié ; le fichier reste ignoré par Git.
+
+4. **Lien à transmettre** : `https://stew-nocode.github.io/emmabot/` (adapter si le compte ou le repo change).
+
+**Limite importante** : le secret finit dans le JavaScript servi au navigateur. Toute personne qui ouvre l’URL peut le retrouver (Outils de développement). Réservez l’URL à un **usage interne** et prévoyez plus tard un **proxy serveur** côté appli pour la prod si le périmètre N8N est sensible.
