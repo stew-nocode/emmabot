@@ -218,6 +218,8 @@
         transition:box-shadow .15s,transform .12s; white-space:nowrap;
       }
       .emma-chip:hover { box-shadow:0 2px 10px rgba(0,0,0,0.12); transform:translateY(-1px); }
+      .emma-chip:disabled { opacity:0.55; cursor:not-allowed; transform:none; }
+      .emma-chip:disabled:hover { box-shadow:0 1px 4px rgba(0,0,0,0.07); transform:none; }
 
       .emma-input-area {
         padding:12px 14px 14px; border-top:1px solid #EDEEF2;
@@ -407,6 +409,9 @@
       sendBtn.disabled = busy;
       sendBtn.style.opacity = busy ? '0.55' : '';
       sendBtn.style.pointerEvents = busy ? 'none' : '';
+      widget.querySelectorAll('.emma-chip').forEach(btn => {
+        btn.disabled = busy;
+      });
     }
 
     function sendMessage() {
