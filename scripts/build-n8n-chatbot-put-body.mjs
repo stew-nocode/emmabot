@@ -6,12 +6,36 @@
 import fs from 'fs';
 import { pickPutSettings } from './n8n-put-settings.mjs';
 import { applyLightChain } from './chatbot-light-chain.mjs';
+import {
+  applyPostgresChatMemoryWindow,
+  DEFAULT_POSTGRES_CONTEXT_WINDOW,
+} from './chatbot-memory-config.mjs';
 
-const argv = process.argv.slice(2);
-const useLightChain = argv.includes('--light-chain');
-const srcPath = argv.find((a) => a !== '--light-chain');
+const args = process.argv.slice(2);
+const useLightChain = args.includes('--light-chain');
+let memoryWindow = DEFAULT_POSTGRES_CONTEXT_WINDOW;
+const mwIdx = args.indexOf('--memory-window');
+if (mwIdx !== -1 && args[mwIdx + 1] != null && !String(args[mwIdx + 1]).startsWith('--')) {
+  const n = Number(args[mwIdx + 1], 10);
+  if (Number.isFinite(n) && n >= 1) memoryWindow = n;
+}
+
+const positional = [];
+for (let i = 0; i < args.length; i++) {
+  const a = args[i];
+  if (a === '--light-chain') continue;
+  if (a === '--memory-window') {
+    i++;
+    continue;
+  }
+  if (a.startsWith('--')) continue;
+  positional.push(a);
+}
+const srcPath = positional[0];
 if (!srcPath) {
-  console.error('Usage: node build-n8n-chatbot-put-body.mjs <workflow.json> [--light-chain]');
+  console.error(
+    'Usage: node build-n8n-chatbot-put-body.mjs <workflow.json> [--light-chain] [--memory-window N]',
+  );
   process.exit(1);
 }
 
@@ -69,6 +93,8 @@ for (const node of w.nodes) {
   }
 }
 
+applyPostgresChatMemoryWindow(w, memoryWindow);
+
 if (useLightChain) {
   applyLightChain(w);
 }
@@ -82,4 +108,6 @@ const body = {
 };
 
 fs.writeFileSync(new URL('../.n8n_put_chatbot_body.json', import.meta.url), JSON.stringify(body), 'utf8');
-console.log('Wrote emmabot/.n8n_put_chatbot_body.json');
+console.log(
+  `Wrote emmabot/.n8n_put_chatbot_body.json (Postgres Chat Memory contextWindowLength=${memoryWindow})`,
+);

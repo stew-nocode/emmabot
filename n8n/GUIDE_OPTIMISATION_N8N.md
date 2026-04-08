@@ -44,7 +44,8 @@ En cas de doute : appeler l’outil (meilleure couverture qu’un refus à tort)
 
 ## 6. Mémoire Postgres
 
-- Vérifier la **fenêtre** (nombre de messages) si le nœud l’expose : limiter évite des prompts énormes (latence).
+- Dans **Postgres Chat Memory** (n8n ≥ 1.1), renseigner **Context Window Length** (`contextWindowLength` dans l’export JSON) : c’est la fenêtre **BufferWindow** (échanges récents envoyés au modèle). Valeur appliquée par le script de build par défaut : **12** (ajustable avec `--memory-window N`).
+- Plus la valeur est basse, plus les longues conversations restent rapides et légères en tokens ; si le bot perd le fil du sujet, monter vers **16–20**.
 - Conserver `sessionKey` = `{{ $json.sessionId }}` (aligné widget).
 
 ## 7. Chaîne n8n — chemin critique
@@ -52,7 +53,7 @@ En cas de doute : appeler l’outil (meilleure couverture qu’un refus à tort)
 - Éviter d’enchaîner **Sheets / HTTP / Data Table lourds** avant la fin du stream côté chat ; les logs sont OK **après** le nœud qui renvoie `output` au trigger (ou en sous-workflow déclenché après coup).
 - Fusionner les nœuds **Code / Set** qui ne font que recopier `output` : l’**AI Agent** expose déjà `output` → enchaîner directement **AI Agent → If** (conditions sur `{{ $json.output }}`), puis branche escalade **output → Insert row** (Data Table), branche normale **output1** seul.
 - Automatisation : exporter le workflow (GET API), puis depuis `emmabot/` :
-  - Prompt + chaîne légère : `node scripts/build-n8n-chatbot-put-body.mjs chemin/workflow.json --light-chain` puis `node scripts/push-chatbot-workflow.mjs`
+  - Prompt + chaîne légère + mémoire : `node scripts/build-n8n-chatbot-put-body.mjs chemin/workflow.json --light-chain` puis `node scripts/push-chatbot-workflow.mjs` (optionnel : `--memory-window 16`)
   - Chaîne seule (sans réécrire le prompt du script) : `node scripts/apply-chatbot-light-chain.mjs chemin/workflow.json` puis `node scripts/push-chatbot-workflow.mjs`.
 
 ## 8. Timeouts
