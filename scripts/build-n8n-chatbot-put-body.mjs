@@ -65,11 +65,10 @@ for (const node of w.nodes) {
   }
 }
 
-// API v1 stricte : le GET peut renvoyer des clés refusées au PUT (ex. availableInMCP).
+// API v1 stricte : le GET renvoie souvent des clés refusées au PUT (availableInMCP, binaryMode, callerPolicy…).
+// Ne reprendre que les clés acceptées par PUT (validées contre l’instance cible).
 const N8N_PUT_SETTINGS_KEYS = new Set([
   'executionOrder',
-  'binaryMode',
-  'callerPolicy',
   'saveExecutionProgress',
   'saveManualExecutions',
   'saveDataErrorExecution',
@@ -86,7 +85,6 @@ function pickPutSettings(src) {
     if (s[key] !== undefined) out[key] = s[key];
   }
   if (out.executionOrder === undefined) out.executionOrder = 'v1';
-  if (out.binaryMode === undefined) out.binaryMode = 'separate';
   return out;
 }
 
