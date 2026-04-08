@@ -1,0 +1,559 @@
+{
+  "meta": {
+    "workflowId": "PNc_3uhUfWJosTQi4qWtW",
+    "workflowName": "chatbot",
+    "exportedAt": "2026-04-08T19:06:02.812Z",
+    "warning": "Fichier sanitizé pour Git : remplacer REDACTED_Emma_SECRET dans le nœud Code auth avant toute réimportation brute ; réattacher les credentials dans n8n si besoin."
+  },
+  "name": "chatbot",
+  "nodes": [
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAzureOpenAi",
+      "typeVersion": 1,
+      "position": [
+        32,
+        192
+      ],
+      "id": "ed2aa81b-d2d5-4dd3-8f0c-d859493c0ad3",
+      "name": "Azure OpenAI Chat Model",
+      "credentials": {
+        "azureOpenAiApi": {
+          "id": "l8K9t2IDNrWgjK2M",
+          "name": "ma clé"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "systemMessage": "=# Rôle\nTu es l'assistant support pour l'ERP **OBC**. Tu réponds en t'appuyant sur la base de connaissance (outil de recherche vectorielle) pour tout ce qui concerne des fonctionnalités, écrans ou procédures.\n\n# Règle de recherche\n- Avant toute réponse **factuelle** sur OBC : utiliser l'outil de recherche vectorielle.\n- Baser la réponse sur les extraits retournés ; n'invente pas de menus ni d'étapes.\n- Si l'outil ne retourne rien d'utile : répondre exactement ce texte (sans guillemets autour) :\nJe n'ai pas cette information dans ma base de connaissance.\nJe transmets immédiatement votre préoccupation au support qui vous reprendra rapidement. Avez-vous d'autres questions ?\n\n# Quand ne pas appeler l'outil\n- Simple salutation ou remerciement.\n- Question générale sur ton rôle (« que sais-tu faire ? ») sans détail métier.\n- Relance conversationnelle d'une réponse déjà donnée dans l'historique récent (sans nouveau sujet OBC).\nEn cas de doute sur le besoin métier : **appeler l'outil**.\n\n# Filtre RAG (optionnel)\n- L'outil de recherche accepte des indications **module** et **produit** quand la question le permet ; sinon laisser vides pour une recherche large.\n- **module** (une valeur) : RH, Opérations, Finance, Projet, Paiement, CRM, Global.\n- **produit** : OBC, SNI, Credit Factory seulement si la question le mentionne clairement.\n- Ne pas inventer module ou produit pour forcer un filtre.\n\n# Langue et ton\n- Langue de l'utilisateur (français par défaut).\n- Professionnel, pédagogique ; une seule question de clarification à la fois si nécessaire.\n\n# Structure des réponses\n- Titres ## pour les sections ; listes pour les étapes.\n- **Gras** pour champs, boutons, menus.\n- Séparateur --- entre grandes sections.\n- Indiquer le **chemin d'accès** dans l'ERP quand il est dans la base.\n\n# Périmètre\nModules : RH, Opérations, Finance, Projet, Paiement, CRM.\n- « Global » / Administration système = paramétrage global, pas un module métier.\n- Hors OBC : « Cette question ne concerne pas l'ERP OBC. Je suis uniquement en mesure de vous assister sur les fonctionnalités de cet ERP. »\n\n# Question vague\n« Pouvez-vous préciser sur quel module ou quelle fonctionnalité porte votre question ? »\n\n# Erreur utilisateur dans l'ERP\nFournir la procédure correcte issue de la base et préciser où l'erreur survient si l'information est disponible.\n\n# Notes\n- « Global », « Administration Système » : paramétrage global de l'ERP, pas des sous-modules OBC.\n- Achat & vente n'est pas un module. N'invente rien."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        128,
+        0
+      ],
+      "id": "b0912041-493b-48c2-a3e2-3e5ba697c8b8",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.sessionId }}",
+        "contextWindowLength": 8
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        208,
+        192
+      ],
+      "id": "fa3703b8-5c35-42d3-9911-b32756d4d8c8",
+      "name": "Postgres Chat Memory",
+      "credentials": {
+        "postgres": {
+          "id": "A2y4YjLT62NuyLCX",
+          "name": "Postgres tickets Onpoint"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Retrieve OBC ERP procedures and features from the knowledge base. Use for business questions about OBC (screens, steps, modules). Optional: when the user clearly scopes the question, the tool accepts rag_module (RH, Opérations, Finance, Projet, Paiement, CRM, Global) and/or rag_produit (OBC, SNI, Credit Factory); leave empty if unsure or cross-cutting. Do not call for standalone greetings; when in doubt, call with empty filters.",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "topK": 5,
+        "options": {
+          "queryName": "match_documents",
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "module",
+                "value": "={{ $fromAI('rag_module', 'OBC module code only if clearly one module: RH, Opérations, Finance, Projet, Paiement, CRM, Global. Empty string if unknown or cross-module.', 'string') }}"
+              },
+              {
+                "name": "produit",
+                "value": "={{ $fromAI('rag_produit', 'Product line only if explicit: OBC, SNI, Credit Factory. Empty string if unknown.', 'string') }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        352,
+        176
+      ],
+      "id": "ea4f9afb-b462-40fe-972c-2dfe020efb06",
+      "name": "Supabase Vector Store",
+      "credentials": {
+        "supabaseApi": {
+          "id": "Zp3hBZH55D2rdC1S",
+          "name": "supabase emma bot onpoin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "text-embedding-3-small",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsAzureOpenAi",
+      "typeVersion": 1,
+      "position": [
+        448,
+        368
+      ],
+      "id": "63bc749d-7228-4cab-99a1-05356474b172",
+      "name": "Embeddings Azure OpenAI",
+      "credentials": {
+        "azureOpenAiApi": {
+          "id": "9B6Fbm1qcEsdNfLx",
+          "name": "mon text embeding"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "afdca75d-0cb2-4dda-9ffb-c51181114bee",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "Je n'ai pas cette information dans ma base de connaissance. Je transmets immédiatement votre préoccupation au support qui vous reprendra rapidement. Avez-vous d'autres questions ?",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "2c1f5c81-5519-4482-8570-5cc613063cb8",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "Je n'ai pas cette information",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "8d37db7e-e399-46a6-9947-b1e44e97d0a2",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "Je transmets immédiatement votre préoccupation",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "57f5ca13-fbdd-4136-bd54-79a0dc1a7b5f",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "Je transmets",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "e98e336c-6b66-44a0-9be4-313db7e34492",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "Je n'ai pas ",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "92e683a4-10d0-4f89-8e76-06f33d381f5f",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "ne concerne pas",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        816,
+        0
+      ],
+      "id": "5a5e49fc-1875-4469-a2e1-1204c75b2f2b",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1KVfvW_5jmw6Z9AQPdO7UX9APpX-yy7qzlUDWFPB7CGo",
+          "mode": "list",
+          "cachedResultName": "Logs",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1KVfvW_5jmw6Z9AQPdO7UX9APpX-yy7qzlUDWFPB7CGo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Liste des assistances à remplir",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1KVfvW_5jmw6Z9AQPdO7UX9APpX-yy7qzlUDWFPB7CGo/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Questions posées ?": "={{ $('When chat message received').item.json.chatInput }}",
+            "Réponses du chatbot": "={{ $json['Réponses'] }}",
+            "sessionid": "={{ $('When chat message received').item.json.sessionId }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Questions posées ?",
+              "displayName": "Questions posées ?",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Réponses du chatbot",
+              "displayName": "Réponses du chatbot",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sessionid",
+              "displayName": "sessionid",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1696,
+        -304
+      ],
+      "id": "7a5baa24-34e7-4591-ae4d-31aa16ed0c8f",
+      "name": "logs",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "03061d72-742c-4a79-adee-d7aab449e509",
+              "name": "output",
+              "value": "={{ $('AI Agent').item.json.output }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1264,
+        -16
+      ],
+      "id": "433a3730-dd8b-4488-b785-1d27f5d67270",
+      "name": "output"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "03061d72-742c-4a79-adee-d7aab449e509",
+              "name": "output",
+              "value": "={{ $('AI Agent').item.json.output }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1136,
+        224
+      ],
+      "id": "ac311c40-2997-4f02-af08-6890034f30a8",
+      "name": "output1"
+    },
+    {
+      "parameters": {
+        "public": true,
+        "initialMessages": "Je suis l'assistant du support OBC.\nComment puis-je vous aider aujourd'hui ?",
+        "options": {
+          "allowFileUploads": true,
+          "loadPreviousSession": "notSupported",
+          "subtitle": "Disponible 24/7.",
+          "title": "Support OBC",
+          "customCss": ":root {\n  /* Colors - Palette dérivée de #0e0c3a */\n  --chat--color--primary: #0e0c3a;\n  --chat--color--primary-shade-50: #0b0a2e;\n  --chat--color--primary--shade-100: #080722;\n  --chat--color--secondary: #4f46e5;\n  --chat--color-secondary-shade-50: #4338ca;\n  --chat--color-white: #fff;\n  --chat--color-light: #f0f0f8;\n  --chat--color-light-shade-50: #e2e2f0;\n  --chat--color-light-shade-100: #c5c5de;\n  --chat--color-medium: #d0d0e8;\n  --chat--color-dark: #0e0c3a;\n  --chat--color-disabled: #c5c5de;\n  --chat--color-typing: #3d3a70;\n\n  /* Base Layout */\n  --chat--spacing: 1rem;\n  --chat--border-radius: 0.25rem;\n  --chat--transition-duration: 0.15s;\n  --chat--font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;\n\n  /* Window Dimensions */\n  --chat--window--width: 400px;\n  --chat--window--height: 600px;\n  --chat--window--bottom: var(--chat--spacing);\n  --chat--window--right: var(--chat--spacing);\n  --chat--window--z-index: 9999;\n  --chat--window--border: 1px solid var(--chat--color-light-shade-50);\n  --chat--window--border-radius: var(--chat--border-radius);\n  --chat--window--margin-bottom: var(--chat--spacing);\n\n  /* Header Styles */\n  --chat--header-height: auto;\n  --chat--header--padding: var(--chat--spacing);\n  --chat--header--background: #0e0c3a;\n  --chat--header--color: #f0f0f8;\n  --chat--header--border-top: none;\n  --chat--header--border-bottom: 1px solid rgba(255, 255, 255, 0.1);\n  --chat--header--border-left: none;\n  --chat--header--border-right: none;\n  --chat--heading--font-size: 2em;\n  --chat--subtitle--font-size: inherit;\n  --chat--subtitle--line-height: 1.8;\n\n  /* Message Styles */\n  --chat--message--font-size: 1rem;\n  --chat--message--padding: var(--chat--spacing);\n  --chat--message--border-radius: var(--chat--border-radius);\n  --chat--message-line-height: 1.5;\n  --chat--message--margin-bottom: calc(var(--chat--spacing) * 1);\n  --chat--message--bot--background: #ffffff;\n  --chat--message--bot--color: #0e0c3a;\n  --chat--message--bot--border: none;\n  --chat--message--user--background: #4f46e5;\n  --chat--message--user--color: #ffffff;\n  --chat--message--user--border: none;\n  --chat--message--pre--background: rgba(14, 12, 58, 0.06);\n  --chat--messages-list--padding: var(--chat--spacing);\n\n  /* Toggle Button */\n  --chat--toggle--size: 64px;\n  --chat--toggle--width: var(--chat--toggle--size);\n  --chat--toggle--height: var(--chat--toggle--size);\n  --chat--toggle--border-radius: 50%;\n  --chat--toggle--background: #0e0c3a;\n  --chat--toggle--hover--background: #0b0a2e;\n  --chat--toggle--active--background: #080722;\n  --chat--toggle--color: #ffffff;\n\n  /* Input Area */\n  --chat--textarea--height: 50px;\n  --chat--textarea--max-height: 30rem;\n  --chat--input--font-size: inherit;\n  --chat--input--border: 0;\n  --chat--input--border-radius: 0;\n  --chat--input--padding: 0.8rem;\n  --chat--input--background: #ffffff;\n  --chat--input--text-color: #0e0c3a;\n  --chat--input--line-height: 1.5;\n  --chat--input--placeholder--font-size: var(--chat--input--font-size);\n  --chat--input--border-active: 0;\n  --chat--input--left--panel--width: 2rem;\n\n  /* Button Styles */\n  --chat--button--padding: calc(var(--chat--spacing) * 5 / 8) var(--chat--spacing);\n  --chat--button--border-radius: var(--chat--border-radius);\n  --chat--button--font-size: 1rem;\n  --chat--button--line-height: 1;\n  --chat--button--color--primary: #f0f0f8;\n  --chat--button--background--primary: #4f46e5;\n  --chat--button--border--primary: none;\n  --chat--button--color--primary--hover: #f0f0f8;\n  --chat--button--background--primary--hover: #4338ca;\n  --chat--button--border--primary--hover: none;\n  --chat--button--color--primary--disabled: #f0f0f8;\n  --chat--button--background--primary--disabled: #a5a1f0;\n  --chat--button--border--primary--disabled: none;\n  --chat--button--color--secondary: #f0f0f8;\n  --chat--button--background--secondary: hsl(0, 0%, 58%);\n  --chat--button--border--secondary: none;\n  --chat--button--color--secondary--hover: #f0f0f8;\n  --chat--button--background--secondary--hover: hsl(0, 0%, 51%);\n  --chat--button--border--secondary--hover: none;\n  --chat--button--color--secondary--disabled: #f0f0f8;\n  --chat--button--background--secondary--disabled: hsl(0, 0%, 78%);\n  --chat--button--border--secondary--disabled: none;\n  --chat--close--button--color-hover: #4f46e5;\n\n  /* Send and File Buttons */\n  --chat--input--send--button--background: #ffffff;\n  --chat--input--send--button--color: #4f46e5;\n  --chat--input--send--button--background-hover: #e2e2f0;\n  --chat--input--send--button--color-hover: #4338ca;\n  --chat--input--file--button--background: #ffffff;\n  --chat--input--file--button--color: #4f46e5;\n  --chat--input--file--button--background-hover: #ffffff;\n  --chat--input--file--button--color-hover: #4338ca;\n  --chat--files-spacing: 0.25rem;\n\n  /* Body and Footer */\n  --chat--body--background: #f0f0f8;\n  --chat--footer--background: #f0f0f8;\n  --chat--footer--color: #0e0c3a;\n}\n\n\n/* You can override any class styles, too. Right-click inspect in Chat UI to find class to override. */\n.chat-message {\n  max-width: 50%;\n}",
+          "responseMode": "streaming"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -272,
+        0
+      ],
+      "id": "ee57dcdc-df27-4748-8fa3-2d347d43fa8b",
+      "name": "When chat message received",
+      "webhookId": "e239be12-d954-4ebf-92e1-d9fca1cbdcca"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "ZD9dFgpD9aIdBznq",
+          "mode": "list",
+          "cachedResultName": "logs chatbot support",
+          "cachedResultUrl": "/projects/FWqhhc90z90D3dtH/datatables/ZD9dFgpD9aIdBznq"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "questions_posees": "={{ $('When chat message received').item.json.chatInput }}",
+            "reponse_chatbot": "={{ $('AI Agent').item.json.output }}",
+            "session_id": "={{ $('When chat message received').item.json.sessionId }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "questions_posees",
+              "displayName": "questions_posees",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reponse_chatbot",
+              "displayName": "reponse_chatbot",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1056,
+        -16
+      ],
+      "id": "151fc7bc-f7af-42b9-89a3-89b67da9ee94",
+      "name": "Insert row"
+    },
+    {
+      "parameters": {
+        "jsCode": "const expected = 'REDACTED_Emma_SECRET';\n\nconst headers =\n  $json?.headers ??\n  $input.first()?.json?.headers ??\n  {};\n\nconst got =\n  headers['x-emma-secret'] ||\n  headers['X-Emma-Secret'] ||\n  $json?.emmaSecret ||\n  $input.first()?.json?.emmaSecret;\n\nif (got !== expected) {\n  throw new Error('Unauthorized: secret manquant ou invalide');\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -64,
+        0
+      ],
+      "id": "9e629128-f39a-4b74-8b80-c0117323357a",
+      "name": "Code in JavaScript1"
+    }
+  ],
+  "connections": {
+    "Azure OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Azure OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "output",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "output1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "logs": {
+      "main": [
+        []
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert row": {
+      "main": [
+        []
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "output": {
+      "main": [
+        [
+          {
+            "node": "Insert row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "output1": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "callerPolicy": "workflowsFromSameOwner",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "timezone": "Europe/Paris"
+  },
+  "staticData": null
+}

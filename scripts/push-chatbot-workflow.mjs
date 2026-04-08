@@ -6,11 +6,10 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { loadN8nMcpEnv } from './n8n-env.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const mcpPath = path.join(process.env.USERPROFILE || '', '.cursor', 'mcp.json');
-const mcp = JSON.parse(fs.readFileSync(mcpPath, 'utf8'));
-const { N8N_BASE_URL, N8N_API_KEY } = mcp.mcpServers.n8n.env;
+const { N8N_BASE_URL, N8N_API_KEY } = loadN8nMcpEnv();
 
 const bodyPath = path.join(__dirname, '..', '.n8n_put_chatbot_body.json');
 const body = JSON.parse(fs.readFileSync(bodyPath, 'utf8'));

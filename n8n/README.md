@@ -9,5 +9,7 @@ Ce dossier documente les changements à appliquer dans **n8n** (UI) et **Supabas
 | `../supabase/match_documents.sql` | Mise à jour de la RPC `match_documents` (filtre `metadata`). |
 | `RAG_METADATA.md` | Convention `module` / `produit` sur les chunks + n8n / SQL. |
 | `../supabase/documents_metadata_gin.sql` | (Optionnel) index GIN sur `documents.metadata`. |
+| `workflows/chatbot.snapshot.json` | Export versionné (secrets Code masqués) — voir `workflows/README.md`. |
+| `../scripts/export-chatbot-workflow-snapshot.mjs` | Régénère le snapshot depuis l’API n8n. |
 
-Après modification dans n8n : **Exporter** le workflow (JSON) et l’ajouter ici en `chatbot.workflow.json` si vous versionnez les exports (optionnel).
+Après changements majeurs dans n8n : lancer **`node scripts/export-chatbot-workflow-snapshot.mjs`** puis commit du JSON.
