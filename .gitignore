@@ -1,2 +1,5 @@
 # Secret local pour la démo (copie de local.config.example.js)
 local.config.js
+
+# Corps JSON temporaire pour PUT n8n (scripts locaux)
+.n8n_put_chatbot_body.json
