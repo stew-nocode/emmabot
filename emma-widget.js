@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  const EMMA_WIDGET_VERSION = '0.2.2';
+  const EMMA_WIDGET_VERSION = '0.2.3';
 
   // ── Already loaded guard ──
   if (global.EmmaChat) return;
@@ -278,7 +278,14 @@
 
     function extractReplyFromJson(data) {
       if (!data || typeof data !== 'object') return '';
-      return data.output || data.text || data.message || '';
+      // n8n / chat stream often sends { type, content } (incl. errors: type "error", content "Unauthorized")
+      return (
+        data.output ||
+        data.text ||
+        data.message ||
+        (typeof data.content === 'string' ? data.content : '') ||
+        ''
+      );
     }
 
     function tryParseJsonReply(raw) {

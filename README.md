@@ -18,6 +18,8 @@ Pendant l’envoi d’un message, l’input, le bouton envoyer et les **suggesti
 - **`EmmaChat.VERSION`** : version du script (debug / support).
 - **`onError`** : callback optionnel `(info) => { … }` avec `info.kind` parmi `http` | `timeout` | `parse` | `network`, plus `version`, `status` (HTTP), `message`, `name`.
 
+Si N8N renvoie un JSON du type `{ "type": "error", "content": "Unauthorized" }` (souvent **header `X-Emma-Secret` manquant**), le widget affiche désormais le texte de **`content`**.
+
 ## Note N8N (mémoire par session)
 
 Dans le workflow N8N, configurer le nœud **Postgres Chat Memory** pour utiliser :

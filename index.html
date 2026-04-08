@@ -63,6 +63,8 @@
     EmmaChat.init({
       webhookUrl:       'https://n8n.srv1336912.hstgr.cloud/webhook/e239be12-d954-4ebf-92e1-d9fca1cbdcca/chat',
       webhookRoute:     'general',
+      // Si ton workflow N8N vérifie X-Emma-Secret, décommente et mets le même secret que dans n8n :
+      // webhookHeaders: { 'X-Emma-Secret': 'TON_SECRET' },
       agentName:        'Emma',
       agentStatus:      'En ligne',
       logoUrl:          'https://i.postimg.cc/NGSs02yS/des.png',
