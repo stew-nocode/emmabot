@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  const EMMA_WIDGET_VERSION = '0.3.3';
+  const EMMA_WIDGET_VERSION = '0.3.4';
 
   // ── Already loaded guard ──
   if (global.EmmaChat) return;
@@ -707,6 +707,9 @@
         let rawBuf = '';
         let lineBuf = '';
         let streamBubble = null;
+        /** Throttle rendu markdown pendant le stream (évite ** bruts tout en limitant le coût regex). */
+        let lastStreamPaintMs = 0;
+        const STREAM_MARKDOWN_MIN_MS = 60;
         /** Limite mémoire / DoS : corps stream brut (NDJSON) */
         const MAX_STREAM_RAW_CHARS = 4 * 1024 * 1024;
         function ensureStreamBubble() {
@@ -721,10 +724,14 @@
         function paintStreamToDom() {
           pendingStreamRaf = null;
           if (!fullText || !thinkingEl.isConnected) return;
+          const now = global.Date.now();
+          if (now - lastStreamPaintMs < STREAM_MARKDOWN_MIN_MS) {
+            pendingStreamRaf = global.requestAnimationFrame(paintStreamToDom);
+            return;
+          }
+          lastStreamPaintMs = now;
           const div = ensureStreamBubble();
-          // Pendant le streaming : textContent évite toute parse regex/HTML (O(1) vs O(n) regex).
-          // Le rendu markdown complet est différé à flushStreamImmediately().
-          div.textContent = fullText;
+          div.innerHTML = formatMessage(fullText);
           scrollBottom();
         }
         function appendStreamDelta(delta) {
