@@ -4,10 +4,14 @@
  * écrit sur stdout le corps JSON pour PUT /api/v1/workflows/:id
  */
 import fs from 'fs';
+import { pickPutSettings } from './n8n-put-settings.mjs';
+import { applyLightChain } from './chatbot-light-chain.mjs';
 
-const srcPath = process.argv[2];
+const argv = process.argv.slice(2);
+const useLightChain = argv.includes('--light-chain');
+const srcPath = argv.find((a) => a !== '--light-chain');
 if (!srcPath) {
-  console.error('Usage: node build-n8n-chatbot-put-body.mjs <workflow.json>');
+  console.error('Usage: node build-n8n-chatbot-put-body.mjs <workflow.json> [--light-chain]');
   process.exit(1);
 }
 
@@ -65,27 +69,8 @@ for (const node of w.nodes) {
   }
 }
 
-// API v1 stricte : le GET renvoie souvent des clés refusées au PUT (availableInMCP, binaryMode, callerPolicy…).
-// Ne reprendre que les clés acceptées par PUT (validées contre l’instance cible).
-const N8N_PUT_SETTINGS_KEYS = new Set([
-  'executionOrder',
-  'saveExecutionProgress',
-  'saveManualExecutions',
-  'saveDataErrorExecution',
-  'saveDataSuccessExecution',
-  'executionTimeout',
-  'errorWorkflow',
-  'timezone',
-]);
-
-function pickPutSettings(src) {
-  const s = src && typeof src === 'object' ? src : {};
-  const out = {};
-  for (const key of N8N_PUT_SETTINGS_KEYS) {
-    if (s[key] !== undefined) out[key] = s[key];
-  }
-  if (out.executionOrder === undefined) out.executionOrder = 'v1';
-  return out;
+if (useLightChain) {
+  applyLightChain(w);
 }
 
 const body = {

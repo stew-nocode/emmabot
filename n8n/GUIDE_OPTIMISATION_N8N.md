@@ -49,8 +49,11 @@ En cas de doute : appeler l’outil (meilleure couverture qu’un refus à tort)
 
 ## 7. Chaîne n8n — chemin critique
 
-- Éviter d’enchaîner **Sheets / HTTP / Data Table lourds** avant le premier octet streamé vers le chat ; déplacer les logs **après** la réponse utilisateur ou vers un sous-workflow asynchrone si possible.
-- Fusionner les nœuds **Code / Set** redondants qui ne font que recopier `output`.
+- Éviter d’enchaîner **Sheets / HTTP / Data Table lourds** avant la fin du stream côté chat ; les logs sont OK **après** le nœud qui renvoie `output` au trigger (ou en sous-workflow déclenché après coup).
+- Fusionner les nœuds **Code / Set** qui ne font que recopier `output` : l’**AI Agent** expose déjà `output` → enchaîner directement **AI Agent → If** (conditions sur `{{ $json.output }}`), puis branche escalade **output → Insert row** (Data Table), branche normale **output1** seul.
+- Automatisation : exporter le workflow (GET API), puis depuis `emmabot/` :
+  - Prompt + chaîne légère : `node scripts/build-n8n-chatbot-put-body.mjs chemin/workflow.json --light-chain` puis `node scripts/push-chatbot-workflow.mjs`
+  - Chaîne seule (sans réécrire le prompt du script) : `node scripts/apply-chatbot-light-chain.mjs chemin/workflow.json` puis `node scripts/push-chatbot-workflow.mjs`.
 
 ## 8. Timeouts
 
