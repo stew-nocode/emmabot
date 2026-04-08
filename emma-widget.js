@@ -22,6 +22,8 @@
     // requestTimeoutMs: max wait for the whole request (headers + streaming body). 0 = disabled.
     requestTimeoutMs: 90000,
     timeoutMessage: 'Délai dépassé. Veuillez réessayer dans un instant.',
+    // Message si le serveur répond avec un code HTTP d’erreur (null = texte par défaut avec status).
+    httpErrorMessage: null,
     agentName: 'Emma',
     agentStatus: 'En ligne',
     logoUrl: 'https://i.postimg.cc/NGSs02yS/des.png',
@@ -259,6 +261,20 @@
   // ── Build HTML ──
   function buildWidget(cfg) {
     let sessionId = resolveSessionId(cfg);
+    let isSending = false;
+
+    function extractReplyFromJson(data) {
+      if (!data || typeof data !== 'object') return '';
+      return data.output || data.text || data.message || '';
+    }
+
+    function tryParseJsonReply(raw) {
+      try {
+        return extractReplyFromJson(JSON.parse(raw));
+      } catch {
+        return '';
+      }
+    }
 
     // Launcher
     const launcher = document.createElement('button');
@@ -384,7 +400,17 @@
       });
       wrap.appendChild(container);
     }
+    function setSendingUI(busy) {
+      const input = widget.querySelector('#emma-input');
+      const sendBtn = widget.querySelector('#emma-send');
+      input.disabled = busy;
+      sendBtn.disabled = busy;
+      sendBtn.style.opacity = busy ? '0.55' : '';
+      sendBtn.style.pointerEvents = busy ? 'none' : '';
+    }
+
     function sendMessage() {
+      if (isSending) return;
       const input = widget.querySelector('#emma-input');
       const text = input.value.trim();
       if (!text) return;
@@ -392,6 +418,10 @@
       sendText(text);
     }
     async function sendText(text) {
+      if (isSending) return;
+      isSending = true;
+      setSendingUI(true);
+
       const chips = widget.querySelector('#emma-chips');
       if (chips) chips.style.display = 'none';
       addUserMessage(text);
@@ -423,37 +453,74 @@
           signal: controller.signal,
         });
 
+        if (!res.ok) {
+          thinkingEl.remove();
+          const errMsg =
+            cfg.httpErrorMessage ||
+            `Service indisponible (${res.status}). Veuillez réessayer plus tard.`;
+          addBotMessage(errMsg);
+          if (typeof cfg.onMessage === 'function') cfg.onMessage({ role: 'bot', text: errMsg });
+          return;
+        }
+
         const contentType = res.headers.get('content-type') || '';
-        if (false) {  // forcer le mode streaming toujours
+        const ct = contentType.toLowerCase();
+        const preferJson =
+          ct.includes('application/json') &&
+          !ct.includes('ndjson') &&
+          !ct.includes('x-ndjson') &&
+          !ct.includes('text/event-stream');
+
+        if (preferJson) {
           const data = await res.json();
           thinkingEl.remove();
-          const reply = data?.output || data?.text || data?.message || 'Aucune réponse reçue.';
+          const reply = extractReplyFromJson(data) || 'Aucune réponse reçue.';
           addBotMessage(reply);
           if (typeof cfg.onMessage === 'function') cfg.onMessage({ role: 'bot', text: reply });
-        } else {
-          const reader = res.body.getReader();
-          const decoder = new TextDecoder();
-          let fullText = '';
-          thinkingEl.remove();
-          const botDiv = addBotMessageEl('');
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            const chunk = decoder.decode(value, { stream: true });
-            chunk.split('\n').filter(l => l.trim()).forEach(line => {
-              try {
-                const parsed = JSON.parse(line);
-                if (parsed.type === 'item' && parsed.content) {
-                  fullText += parsed.content;
-                  botDiv.innerHTML = formatMessage(fullText);
-                  scrollBottom();
-                }
-              } catch {}
-            });
-          }
-          if (!fullText) botDiv.textContent = 'Aucune réponse reçue.';
-          if (typeof cfg.onMessage === 'function') cfg.onMessage({ role: 'bot', text: fullText });
+          return;
         }
+
+        if (!res.body) {
+          const raw = await res.text();
+          thinkingEl.remove();
+          const reply = tryParseJsonReply(raw.trim()) || raw.trim() || 'Aucune réponse reçue.';
+          addBotMessage(reply);
+          if (typeof cfg.onMessage === 'function') cfg.onMessage({ role: 'bot', text: reply });
+          return;
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let fullText = '';
+        let rawBuf = '';
+        thinkingEl.remove();
+        const botDiv = addBotMessageEl('');
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          rawBuf += chunk;
+          chunk.split('\n').filter(l => l.trim()).forEach(line => {
+            try {
+              const parsed = JSON.parse(line);
+              if (parsed.type === 'item' && parsed.content) {
+                fullText += parsed.content;
+                botDiv.innerHTML = formatMessage(fullText);
+                scrollBottom();
+              }
+            } catch {}
+          });
+        }
+        if (!fullText && rawBuf.trim()) {
+          const fallback = tryParseJsonReply(rawBuf.trim());
+          if (fallback) {
+            fullText = fallback;
+            botDiv.innerHTML = formatMessage(fullText);
+            scrollBottom();
+          }
+        }
+        if (!fullText) botDiv.textContent = 'Aucune réponse reçue.';
+        if (typeof cfg.onMessage === 'function') cfg.onMessage({ role: 'bot', text: fullText });
       } catch (e) {
         thinkingEl.remove();
         const aborted = e && (e.name === 'AbortError' || e.name === 'TimeoutError');
@@ -464,6 +531,8 @@
         }
       } finally {
         if (timeoutId) global.clearTimeout(timeoutId);
+        isSending = false;
+        setSendingUI(false);
       }
     }
     function addUserMessage(text) {

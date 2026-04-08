@@ -11,6 +11,9 @@ Copier-coller le snippet dans `EMBED_SNIPPET.html`.
 - **`sessionScope`** : `"browser"` (défaut), `"tab"`, ou `"conversation"`
 - **`requestTimeoutMs`** : délai max pour la requête + stream (défaut `90000` ms). Mettre `0` pour désactiver.
 - **`timeoutMessage`** : texte affiché si le délai est dépassé.
+- **`httpErrorMessage`** : message si réponse HTTP non OK (sinon message par défaut avec code).
+
+Pendant l’envoi d’un message, l’input et le bouton envoyer sont **désactivés** (anti double-envoi).
 
 ## Note N8N (mémoire par session)
 
