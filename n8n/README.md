@@ -13,3 +13,5 @@ Ce dossier documente les changements à appliquer dans **n8n** (UI) et **Supabas
 | `../scripts/export-chatbot-workflow-snapshot.mjs` | Régénère le snapshot depuis l’API n8n. |
 
 Après changements majeurs dans n8n : lancer **`node scripts/export-chatbot-workflow-snapshot.mjs`** puis commit du JSON.
+
+**Build** : filtres RAG metadata = **`--rag-metadata-filters`** (opt-in). Par défaut le script **retire** les metadata filters du nœud Supabase pour éviter 0 résultat tant que les chunks ne sont pas étiquetés.

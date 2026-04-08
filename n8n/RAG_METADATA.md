@@ -18,8 +18,9 @@ Les valeurs doivent **correspondre exactement** à ce que le modèle peut passer
 
 ## Côté n8n
 
-- Nœud **Supabase Vector Store** (mode *Retrieve Documents as Tool*) : options **Metadata Filter** avec `$fromAI` sur `module` et `produit` (généré par `scripts/build-n8n-chatbot-put-body.mjs` par défaut).
-- Le prompt système rappelle à l’agent de **ne remplir les filtres que si c’est clair** ; sinon chaînes vides → pas de contrainte côté SQL (voir `supabase/match_documents.sql`).
+- **Sans** métadonnées fiables sur **tous** les chunks utiles : **ne pas** activer les filtres (sinon `metadata @> filter` exclut les lignes sans ces clés → **aucun** document, escalade en boucle).
+- Filtres `$fromAI` : activer via **`--rag-metadata-filters`** sur `build-n8n-chatbot-put-body.mjs` (désactivés par défaut).
+- Le SQL `match_documents.sql` enlève les clés vides du filtre, mais ne peut pas deviner un `module` manquant sur un chunk.
 
 ## Côté SQL
 

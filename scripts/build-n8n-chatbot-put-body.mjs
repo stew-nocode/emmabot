@@ -12,12 +12,15 @@ import {
 } from './chatbot-memory-config.mjs';
 import {
   applyVectorStoreRagMetadataFilters,
-  RAG_TOOL_DESCRIPTION,
+  clearVectorStoreRagMetadataFilters,
+  RAG_TOOL_DESCRIPTION_SIMPLE,
+  RAG_TOOL_DESCRIPTION_WITH_FILTERS,
 } from './chatbot-rag-metadata.mjs';
 
 const args = process.argv.slice(2);
 const useLightChain = args.includes('--light-chain');
-const useRagMetadataFilters = !args.includes('--no-rag-metadata-filters');
+/** Filtres metadata : opt-in uniquement (sinon 0 résultat si chunks sans module/produit). */
+const useRagMetadataFilters = args.includes('--rag-metadata-filters');
 let memoryWindow = DEFAULT_POSTGRES_CONTEXT_WINDOW;
 const mwIdx = args.indexOf('--memory-window');
 if (mwIdx !== -1 && args[mwIdx + 1] != null && !String(args[mwIdx + 1]).startsWith('--')) {
@@ -29,7 +32,7 @@ const positional = [];
 for (let i = 0; i < args.length; i++) {
   const a = args[i];
   if (a === '--light-chain') continue;
-  if (a === '--no-rag-metadata-filters') continue;
+  if (a === '--rag-metadata-filters') continue;
   if (a === '--memory-window') {
     i++;
     continue;
@@ -40,12 +43,20 @@ for (let i = 0; i < args.length; i++) {
 const srcPath = positional[0];
 if (!srcPath) {
   console.error(
-    'Usage: node build-n8n-chatbot-put-body.mjs <workflow.json> [--light-chain] [--memory-window N] [--no-rag-metadata-filters]',
+    'Usage: node build-n8n-chatbot-put-body.mjs <workflow.json> [--light-chain] [--memory-window N] [--rag-metadata-filters]',
   );
   process.exit(1);
 }
 
 const w = JSON.parse(fs.readFileSync(srcPath, 'utf8'));
+
+const systemRagFilterBlock = `
+# Filtre RAG (optionnel)
+- L'outil de recherche accepte des indications **module** et **produit** quand la question le permet ; sinon laisser vides pour une recherche large.
+- **module** (une valeur) : RH, Opérations, Finance, Projet, Paiement, CRM, Global.
+- **produit** : OBC, SNI, Credit Factory seulement si la question le mentionne clairement.
+- Ne pas inventer module ou produit pour forcer un filtre.
+`;
 
 const newSystemMessage = `=# Rôle
 Tu es l'assistant support pour l'ERP **OBC**. Tu réponds en t'appuyant sur la base de connaissance (outil de recherche vectorielle) pour tout ce qui concerne des fonctionnalités, écrans ou procédures.
@@ -62,13 +73,7 @@ Je transmets immédiatement votre préoccupation au support qui vous reprendra r
 - Question générale sur ton rôle (« que sais-tu faire ? ») sans détail métier.
 - Relance conversationnelle d'une réponse déjà donnée dans l'historique récent (sans nouveau sujet OBC).
 En cas de doute sur le besoin métier : **appeler l'outil**.
-
-# Filtre RAG (optionnel)
-- L'outil de recherche accepte des indications **module** et **produit** quand la question le permet ; sinon laisser vides pour une recherche large.
-- **module** (une valeur) : RH, Opérations, Finance, Projet, Paiement, CRM, Global.
-- **produit** : OBC, SNI, Credit Factory seulement si la question le mentionne clairement.
-- Ne pas inventer module ou produit pour forcer un filtre.
-
+${useRagMetadataFilters ? systemRagFilterBlock : ''}
 # Langue et ton
 - Langue de l'utilisateur (français par défaut).
 - Professionnel, pédagogique ; une seule question de clarification à la fois si nécessaire.
@@ -99,12 +104,16 @@ for (const node of w.nodes) {
     node.parameters.options.systemMessage = newSystemMessage;
   }
   if (node.name === 'Supabase Vector Store' && node.parameters?.mode === 'retrieve-as-tool') {
-    node.parameters.toolDescription = RAG_TOOL_DESCRIPTION;
+    node.parameters.toolDescription = useRagMetadataFilters
+      ? RAG_TOOL_DESCRIPTION_WITH_FILTERS
+      : RAG_TOOL_DESCRIPTION_SIMPLE;
   }
 }
 
 if (useRagMetadataFilters) {
   applyVectorStoreRagMetadataFilters(w);
+} else {
+  clearVectorStoreRagMetadataFilters(w);
 }
 
 applyPostgresChatMemoryWindow(w, memoryWindow);

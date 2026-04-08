@@ -2,7 +2,7 @@
   "meta": {
     "workflowId": "PNc_3uhUfWJosTQi4qWtW",
     "workflowName": "chatbot",
-    "exportedAt": "2026-04-08T19:06:02.812Z",
+    "exportedAt": "2026-04-08T19:33:26.712Z",
     "warning": "Fichier sanitizé pour Git : remplacer REDACTED_Emma_SECRET dans le nœud Code auth avant toute réimportation brute ; réattacher les credentials dans n8n si besoin."
   },
   "name": "chatbot",
@@ -32,7 +32,7 @@
         "promptType": "define",
         "text": "={{ $json.chatInput }}",
         "options": {
-          "systemMessage": "=# Rôle\nTu es l'assistant support pour l'ERP **OBC**. Tu réponds en t'appuyant sur la base de connaissance (outil de recherche vectorielle) pour tout ce qui concerne des fonctionnalités, écrans ou procédures.\n\n# Règle de recherche\n- Avant toute réponse **factuelle** sur OBC : utiliser l'outil de recherche vectorielle.\n- Baser la réponse sur les extraits retournés ; n'invente pas de menus ni d'étapes.\n- Si l'outil ne retourne rien d'utile : répondre exactement ce texte (sans guillemets autour) :\nJe n'ai pas cette information dans ma base de connaissance.\nJe transmets immédiatement votre préoccupation au support qui vous reprendra rapidement. Avez-vous d'autres questions ?\n\n# Quand ne pas appeler l'outil\n- Simple salutation ou remerciement.\n- Question générale sur ton rôle (« que sais-tu faire ? ») sans détail métier.\n- Relance conversationnelle d'une réponse déjà donnée dans l'historique récent (sans nouveau sujet OBC).\nEn cas de doute sur le besoin métier : **appeler l'outil**.\n\n# Filtre RAG (optionnel)\n- L'outil de recherche accepte des indications **module** et **produit** quand la question le permet ; sinon laisser vides pour une recherche large.\n- **module** (une valeur) : RH, Opérations, Finance, Projet, Paiement, CRM, Global.\n- **produit** : OBC, SNI, Credit Factory seulement si la question le mentionne clairement.\n- Ne pas inventer module ou produit pour forcer un filtre.\n\n# Langue et ton\n- Langue de l'utilisateur (français par défaut).\n- Professionnel, pédagogique ; une seule question de clarification à la fois si nécessaire.\n\n# Structure des réponses\n- Titres ## pour les sections ; listes pour les étapes.\n- **Gras** pour champs, boutons, menus.\n- Séparateur --- entre grandes sections.\n- Indiquer le **chemin d'accès** dans l'ERP quand il est dans la base.\n\n# Périmètre\nModules : RH, Opérations, Finance, Projet, Paiement, CRM.\n- « Global » / Administration système = paramétrage global, pas un module métier.\n- Hors OBC : « Cette question ne concerne pas l'ERP OBC. Je suis uniquement en mesure de vous assister sur les fonctionnalités de cet ERP. »\n\n# Question vague\n« Pouvez-vous préciser sur quel module ou quelle fonctionnalité porte votre question ? »\n\n# Erreur utilisateur dans l'ERP\nFournir la procédure correcte issue de la base et préciser où l'erreur survient si l'information est disponible.\n\n# Notes\n- « Global », « Administration Système » : paramétrage global de l'ERP, pas des sous-modules OBC.\n- Achat & vente n'est pas un module. N'invente rien."
+          "systemMessage": "=# Rôle\nTu es l'assistant support pour l'ERP **OBC**. Tu réponds en t'appuyant sur la base de connaissance (outil de recherche vectorielle) pour tout ce qui concerne des fonctionnalités, écrans ou procédures.\n\n# Règle de recherche\n- Avant toute réponse **factuelle** sur OBC : utiliser l'outil de recherche vectorielle.\n- Baser la réponse sur les extraits retournés ; n'invente pas de menus ni d'étapes.\n- Si l'outil ne retourne rien d'utile : répondre exactement ce texte (sans guillemets autour) :\nJe n'ai pas cette information dans ma base de connaissance.\nJe transmets immédiatement votre préoccupation au support qui vous reprendra rapidement. Avez-vous d'autres questions ?\n\n# Quand ne pas appeler l'outil\n- Simple salutation ou remerciement.\n- Question générale sur ton rôle (« que sais-tu faire ? ») sans détail métier.\n- Relance conversationnelle d'une réponse déjà donnée dans l'historique récent (sans nouveau sujet OBC).\nEn cas de doute sur le besoin métier : **appeler l'outil**.\n\n# Langue et ton\n- Langue de l'utilisateur (français par défaut).\n- Professionnel, pédagogique ; une seule question de clarification à la fois si nécessaire.\n\n# Structure des réponses\n- Titres ## pour les sections ; listes pour les étapes.\n- **Gras** pour champs, boutons, menus.\n- Séparateur --- entre grandes sections.\n- Indiquer le **chemin d'accès** dans l'ERP quand il est dans la base.\n\n# Périmètre\nModules : RH, Opérations, Finance, Projet, Paiement, CRM.\n- « Global » / Administration système = paramétrage global, pas un module métier.\n- Hors OBC : « Cette question ne concerne pas l'ERP OBC. Je suis uniquement en mesure de vous assister sur les fonctionnalités de cet ERP. »\n\n# Question vague\n« Pouvez-vous préciser sur quel module ou quelle fonctionnalité porte votre question ? »\n\n# Erreur utilisateur dans l'ERP\nFournir la procédure correcte issue de la base et préciser où l'erreur survient si l'information est disponible.\n\n# Notes\n- « Global », « Administration Système » : paramétrage global de l'ERP, pas des sous-modules OBC.\n- Achat & vente n'est pas un module. N'invente rien."
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
@@ -48,7 +48,7 @@
       "parameters": {
         "sessionIdType": "customKey",
         "sessionKey": "={{ $json.sessionId }}",
-        "contextWindowLength": 8
+        "contextWindowLength": 12
       },
       "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
       "typeVersion": 1.3,
@@ -68,7 +68,7 @@
     {
       "parameters": {
         "mode": "retrieve-as-tool",
-        "toolDescription": "Retrieve OBC ERP procedures and features from the knowledge base. Use for business questions about OBC (screens, steps, modules). Optional: when the user clearly scopes the question, the tool accepts rag_module (RH, Opérations, Finance, Projet, Paiement, CRM, Global) and/or rag_produit (OBC, SNI, Credit Factory); leave empty if unsure or cross-cutting. Do not call for standalone greetings; when in doubt, call with empty filters.",
+        "toolDescription": "Retrieve OBC ERP procedures and features from the knowledge base. Use for any business question about OBC (screens, steps, modules). Do not call for standalone greetings or thanks without a concrete OBC question; when in doubt, call this tool.",
         "tableName": {
           "__rl": true,
           "value": "documents",
@@ -77,19 +77,7 @@
         },
         "topK": 5,
         "options": {
-          "queryName": "match_documents",
-          "metadata": {
-            "metadataValues": [
-              {
-                "name": "module",
-                "value": "={{ $fromAI('rag_module', 'OBC module code only if clearly one module: RH, Opérations, Finance, Projet, Paiement, CRM, Global. Empty string if unknown or cross-module.', 'string') }}"
-              },
-              {
-                "name": "produit",
-                "value": "={{ $fromAI('rag_produit', 'Product line only if explicit: OBC, SNI, Credit Factory. Empty string if unknown.', 'string') }}"
-              }
-            ]
-          }
+          "queryName": "match_documents"
         }
       },
       "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
