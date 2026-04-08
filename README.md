@@ -13,7 +13,8 @@ Copier-coller le snippet dans `EMBED_SNIPPET.html`.
 ### Paramètres à configurer
 
 - **`webhookUrl`** : URL du webhook N8N
-- **`webhookHeaders["X-Emma-Secret"]`** : secret partagé (optionnel mais recommandé)
+- **`webhookHeaders["X-Emma-Secret"]`** : secret partagé (optionnel mais recommandé). Le widget envoie aussi la même valeur dans le corps JSON sous **`emmaSecret`** (nécessaire si le trigger Chat N8N n’expose pas les en-têtes HTTP dans `$json`).
+- **`sharedSecret`** : alternative au header — même effet sur `emmaSecret` dans le corps (prioritaire sur le header si les deux sont définis).
 - **`sessionScope`** : `"browser"` (défaut), `"tab"`, ou `"conversation"`
 - **`requestTimeoutMs`** : délai max pour la requête + stream (défaut `90000` ms). Mettre `0` pour désactiver.
 - **`timeoutMessage`** : texte affiché si le délai est dépassé.
@@ -31,4 +32,11 @@ Si N8N renvoie un JSON du type `{ "type": "error", "content": "Unauthorized" }` 
 Dans le workflow N8N, configurer le nœud **Postgres Chat Memory** pour utiliser :
 
 - **Key** : `{{ $json.sessionId }}`
+
+### Vérification du secret (trigger « When chat message received »)
+
+Les en-têtes HTTP ne sont en général **pas** disponibles dans `$json.headers` avec ce trigger. Dans ton nœud **Code**, accepte aussi le corps :
+
+- `const got = ($json.headers?.['x-emma-secret'] || $json.headers?.['X-Emma-Secret'] || $json.emmaSecret);`
+- Compare `got` à la valeur attendue comme avant.
 
