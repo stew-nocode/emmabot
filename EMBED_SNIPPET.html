@@ -1,5 +1,6 @@
 <!-- Emma widget embed snippet (copier-coller) -->
 <!-- À placer dans le <head> (ou juste avant </body>) -->
+<!-- Après une mise à jour du widget, ajouter ?v=1.2.3 à l’URL pour éviter le cache navigateur (ex: .../emma-widget.js?v=1.2.3) -->
 <script src="https://stew-nocode.github.io/emmabot/emma-widget.js"></script>
 
 <script>
@@ -14,6 +15,7 @@
     webhookHeaders: {
       "X-Emma-Secret": "A_REMPLACER_PAR_VOTRE_SECRET"
     },
+    // Tant que le secret n’est pas configuré côté N8N, retirer le bloc webhookHeaders ci-dessus.
 
     // ── Session (ATTENDU) ──
     // "browser" (défaut) = 1 session par navigateur (persistée)
@@ -21,9 +23,15 @@
     // "conversation" = nouvelle session à chaque démarrage
     sessionScope: "browser",
 
+    // ── Fiabilité (OPTIONNEL, défauts dans le widget si omis) ──
+    // requestTimeoutMs: 90000,
+    // timeoutMessage: "Délai dépassé. Veuillez réessayer dans un instant.",
+    // Mettre requestTimeoutMs: 0 pour désactiver la limite de temps.
+
     // ── Agent / Branding (OPTIONNEL) ──
     agentName:   "Emma",
     agentStatus: "En ligne",
+    // Remplacer l’URL ou supprimer la ligne logoUrl pour garder le logo par défaut du widget.
     logoUrl:     "https://votre-domaine.com/logo.png",
 
     // ── Textes (OPTIONNEL) ──
