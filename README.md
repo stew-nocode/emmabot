@@ -15,6 +15,9 @@ Copier-coller le snippet dans `EMBED_SNIPPET.html`.
 
 Pendant l’envoi d’un message, l’input, le bouton envoyer et les **suggestions (chips)** sont **désactivés** (anti double-envoi).
 
+- **`EmmaChat.VERSION`** : version du script (debug / support).
+- **`onError`** : callback optionnel `(info) => { … }` avec `info.kind` parmi `http` | `timeout` | `parse` | `network`, plus `version`, `status` (HTTP), `message`, `name`.
+
 ## Note N8N (mémoire par session)
 
 Dans le workflow N8N, configurer le nœud **Postgres Chat Memory** pour utiliser :

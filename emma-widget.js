@@ -1,6 +1,8 @@
 (function (global) {
   'use strict';
 
+  const EMMA_WIDGET_VERSION = '0.2.1';
+
   // ── Already loaded guard ──
   if (global.EmmaChat) return;
 
@@ -41,6 +43,8 @@
     onOpen: null,
     onClose: null,
     onMessage: null,
+    // onError: (info) => {} — info: { kind, version, status?, message?, name? }
+    onError: null,
   };
 
   function safeGetLocalStorage() {
@@ -265,6 +269,13 @@
     let sessionId = resolveSessionId(cfg);
     let isSending = false;
 
+    function emitError(payload) {
+      if (typeof cfg.onError !== 'function') return;
+      try {
+        cfg.onError(Object.assign({ version: EMMA_WIDGET_VERSION }, payload));
+      } catch (_) {}
+    }
+
     function extractReplyFromJson(data) {
       if (!data || typeof data !== 'object') return '';
       return data.output || data.text || data.message || '';
@@ -460,6 +471,7 @@
 
         if (!res.ok) {
           thinkingEl.remove();
+          emitError({ kind: 'http', status: res.status });
           const errMsg =
             cfg.httpErrorMessage ||
             `Service indisponible (${res.status}). Veuillez réessayer plus tard.`;
@@ -477,7 +489,17 @@
           !ct.includes('text/event-stream');
 
         if (preferJson) {
-          const data = await res.json();
+          let data;
+          try {
+            data = await res.json();
+          } catch (err) {
+            thinkingEl.remove();
+            emitError({ kind: 'parse', message: err && err.message });
+            const errMsg = 'Réponse invalide du serveur.';
+            addBotMessage(errMsg);
+            if (typeof cfg.onMessage === 'function') cfg.onMessage({ role: 'bot', text: errMsg });
+            return;
+          }
           thinkingEl.remove();
           const reply = extractReplyFromJson(data) || 'Aucune réponse reçue.';
           addBotMessage(reply);
@@ -530,8 +552,10 @@
         thinkingEl.remove();
         const aborted = e && (e.name === 'AbortError' || e.name === 'TimeoutError');
         if (aborted) {
+          emitError({ kind: 'timeout', message: e && e.message, name: e && e.name });
           addBotMessage(cfg.timeoutMessage || 'Délai dépassé. Veuillez réessayer dans un instant.');
         } else {
+          emitError({ kind: 'network', message: e && e.message, name: e && e.name });
           addBotMessage('Une erreur est survenue. Veuillez réessayer.');
         }
       } finally {
@@ -630,6 +654,7 @@
 
   // ── Public EmmaChat API ──
   global.EmmaChat = {
+    VERSION: EMMA_WIDGET_VERSION,
     /**
      * Initialize the chat widget
      * @param {object} options - Configuration options

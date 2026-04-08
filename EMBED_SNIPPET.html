@@ -1,7 +1,7 @@
 <!-- Emma widget embed snippet (copier-coller) -->
 <!-- À placer dans le <head> (ou juste avant </body>) -->
 <!-- Incrémenter ?v= à chaque release publiée sur GitHub Pages (cache navigateur). -->
-<script src="https://stew-nocode.github.io/emmabot/emma-widget.js?v=0.2.0"></script>
+<script src="https://stew-nocode.github.io/emmabot/emma-widget.js?v=0.2.1"></script>
 
 <script>
   EmmaChat.init({
@@ -57,7 +57,8 @@
     // ── Callbacks (OPTIONNEL) ──
     onOpen:    () => console.log("Widget ouvert"),
     onClose:   () => console.log("Widget fermé"),
-    onMessage: (msg) => console.log("[EmmaChat]", msg.role, ":", msg.text)
+    onMessage: (msg) => console.log("[EmmaChat]", msg.role, ":", msg.text),
+    // onError: (info) => console.warn("[EmmaChat]", info.kind, info)
   });
 </script>
 
