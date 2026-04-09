@@ -53,4 +53,20 @@ Dans n8n, **Supabase Vector Store** : passer **Limit** de 5 à **8**, refaire le
 
 ---
 
+## Session navigateur (2026-04-09)
+
+**Contexte** : page de démo locale `http://127.0.0.1:8765/emmabot/` (`npx serve` depuis la racine du dépôt), widget Emma branché sur le webhook n8n habituel. Vérification des **pistes prioritaires** (RH, admin/entités, Excel, connexion, faute volontaire).
+
+| Piste | Question posée | Observation |
+|--------|----------------|-------------|
+| Navigation RH | « Où trouver le module RH dans OBC ? » | **Partiel / OK** : sous-modules cités (Gestion employé, Salaire, Paramétrage société), accès via menu principal → module RH ; pas de chemin menu détaillé clic à clic. |
+| Admin / entités | « Comment paramétrer les entités dans le module administration ? » | **KO / Escalade** : absence d’info en base → message de transmission au support. |
+| Faute « dministration » | Même intention avec « module dministration » | **Idem** : même escalade ; le problème est le **gap KB**, pas l’orthographe. |
+| Export Excel | « Comment exporter un rapport en Excel dans OBC ? » | **Partiel** : pas de procédure dédiée ; renvoi à la balance comptable (analyser / exporter / imprimer selon l’ERP) + invitation à préciser le rapport. |
+| Connexion ERP | « Je n’arrive pas à me connecter à OBC, que faire ? » | **OK** : mot de passe oublié, réinitialisation par admin (Administration système → Gestion des comptes utilisateurs), vérification compte / droits, puis support si besoin. |
+
+**Synthèse** : enrichir surtout la KB sur **paramétrage des entités** (Administration) et, si besoin, **exports Excel** par contexte ; la **connexion** est déjà couverte ; le **RH** peut être affiné avec des libellés de menu plus littéraux si la doc le permet.
+
+---
+
 *Dernière mise à jour des chiffres : automatique via requêtes SQL ; ajuster la date si vous recalculez.*
