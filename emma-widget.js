@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  const EMMA_WIDGET_VERSION = '0.3.5';
+  const EMMA_WIDGET_VERSION = '0.3.6';
 
   // ── Already loaded guard ──
   if (global.EmmaChat) return;

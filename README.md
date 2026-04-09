@@ -60,6 +60,10 @@ Objectif : faire tester le chat sur `https://<user>.github.io/emmabot/` **avant*
 
 4. **Lien à transmettre** : `https://stew-nocode.github.io/emmabot/` (adapter si le compte ou le repo change).
 
+### Aligner les questions rapides (chips) avec le RAG
+
+GitHub Pages sert **`index.html`** du dépôt. Si, en local, vous testez via une page qui reprend **`EMBED_SNIPPET.html`**, les textes des **suggestions** doivent être **strictement les mêmes** (y compris l’**espace avant `?`**). Une petite différence peut changer l’embedding et, selon les chunks, n’affecter qu’une question (ex. bon de commande). Après modification de `index.html`, refaire un **push sur `main`** pour redéployer Pages.
+
 ### Si le workflow est rouge (« EMMA_SECRET absent »)
 
 - Vérifier que le secret s’appelle bien **`EMMA_SECRET`** (pas `EMMA_SECRETS`, pas d’espace).  
