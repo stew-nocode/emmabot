@@ -1,7 +1,7 @@
 <!-- Emma widget embed snippet (copier-coller) -->
 <!-- À placer dans le <head> (ou juste avant </body>) -->
 <!-- Incrémenter ?v= à chaque release publiée sur GitHub Pages (cache navigateur). -->
-<script src="https://stew-nocode.github.io/emmabot/emma-widget.js?v=0.3.5"></script>
+<script src="https://stew-nocode.github.io/emmabot/emma-widget.js?v=0.3.7"></script>
 
 <script>
   EmmaChat.init({
@@ -22,6 +22,9 @@
     // "tab" = 1 session par onglet
     // "conversation" = nouvelle session à chaque démarrage
     sessionScope: "browser",
+    // Lien utilisateur ERP (optionnel) : isole la session par user + envoie emmaUserId dans le JSON vers n8n.
+    // Laisser commenté ou omis pour démo / tests sans ERP.
+    // userId: window.__ERP_CURRENT_USER_ID__,
 
     // ── Fiabilité (OPTIONNEL, défauts dans le widget si omis) ──
     // requestTimeoutMs: 90000,

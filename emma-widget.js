@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  const EMMA_WIDGET_VERSION = '0.3.6';
+  const EMMA_WIDGET_VERSION = '0.3.7';
 
   // ── Already loaded guard ──
   if (global.EmmaChat) return;
@@ -17,6 +17,9 @@
     sharedSecret: null,
     // sessionId: custom session id string. If omitted, the widget will generate one and persist it in localStorage.
     sessionId: null,
+    // userId: identifiant ERP (optionnel). Si défini sans sessionId explicite, la session est isolée par utilisateur
+    // (clé localStorage/sessionStorage dérivée) et le corps JSON inclut emmaUserId pour n8n / logs. Absent = comportement inchangé (démo / tests).
+    userId: null,
     // sessionScope:
     // - "browser" (default): one session per browser (persisted in localStorage)
     // - "tab": one session per tab (persisted in sessionStorage)
@@ -120,6 +123,18 @@
     return `sess_${Date.now()}_${Math.random().toString(16).slice(2)}`;
   }
 
+  /** Clé de stockage : sans userId = sessionStorageKey ; avec userId = suffixe dérivé (une session persistante par utilisateur). */
+  function effectiveSessionStorageKey(cfg) {
+    const base = String(cfg.sessionStorageKey || DEFAULTS.sessionStorageKey).trim() || DEFAULTS.sessionStorageKey;
+    const raw = cfg.userId == null ? '' : String(cfg.userId).trim();
+    if (!raw) return base;
+    try {
+      return base + ':user:' + encodeURIComponent(raw).slice(0, 500);
+    } catch {
+      return base + ':user:invalid';
+    }
+  }
+
   function resolveSessionId(cfg, opts) {
     if (cfg.sessionId && String(cfg.sessionId).trim()) return String(cfg.sessionId).trim();
     const scope = (cfg.sessionScope || 'browser').toLowerCase();
@@ -130,11 +145,12 @@
     const storage = scope === 'tab' ? safeGetSessionStorage() : safeGetLocalStorage();
     if (!storage) return createSessionId();
 
-    const existing = storage.getItem(cfg.sessionStorageKey);
+    const storageKey = effectiveSessionStorageKey(cfg);
+    const existing = storage.getItem(storageKey);
     if (existing && existing.trim()) return existing.trim();
 
     const fresh = createSessionId();
-    storage.setItem(cfg.sessionStorageKey, fresh);
+    storage.setItem(storageKey, fresh);
     return fresh;
   }
 
@@ -619,6 +635,7 @@
         const fromCfg = cfg.sharedSecret && String(cfg.sharedSecret).trim();
         const emmaSecret = (fromCfg || (fromHeader && String(fromHeader).trim()) || '') || null;
 
+        const trimmedUserId = cfg.userId != null && String(cfg.userId).trim();
         const res = await fetch(cfg.webhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...extraHeaders },
@@ -628,6 +645,7 @@
             route: cfg.webhookRoute,
             sessionId,
             ...(emmaSecret ? { emmaSecret } : {}),
+            ...(trimmedUserId ? { emmaUserId: trimmedUserId } : {}),
           }),
           signal: controller.signal,
         });

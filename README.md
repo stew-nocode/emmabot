@@ -16,6 +16,7 @@ Copier-coller le snippet dans `EMBED_SNIPPET.html`.
 - **`webhookHeaders["X-Emma-Secret"]`** : secret partagé (optionnel mais recommandé). Le widget envoie aussi la même valeur dans le corps JSON sous **`emmaSecret`** (nécessaire si le trigger Chat N8N n’expose pas les en-têtes HTTP dans `$json`).
 - **`sharedSecret`** : alternative au header — même effet sur `emmaSecret` dans le corps (prioritaire sur le header si les deux sont définis).
 - **`sessionScope`** : `"browser"` (défaut), `"tab"`, ou `"conversation"`
+- **`userId`** (optionnel) : identifiant stable de l’utilisateur connecté dans l’ERP. Sans ce champ, le comportement reste **identique** à avant (UUID + `localStorage` global) — adapté aux démos et tests. Avec `userId`, le widget utilise une **clé de stockage par utilisateur** (une conversation persistante par compte sur ce navigateur) et ajoute **`emmaUserId`** dans le corps JSON envoyé à n8n (en plus de `sessionId`). Si vous définissez **`sessionId`** explicitement, il reste prioritaire pour la mémoire chat ; `emmaUserId` est quand même envoyé si `userId` est défini.
 - **`requestTimeoutMs`** : délai max pour la requête + stream (défaut `90000` ms). Mettre `0` pour désactiver.
 - **`timeoutMessage`** : texte affiché si le délai est dépassé.
 - **`httpErrorMessage`** : message si réponse HTTP non OK (sinon message par défaut avec code).

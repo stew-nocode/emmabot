@@ -16,3 +16,5 @@ Ce dossier documente les changements à appliquer dans **n8n** (UI) et **Supabas
 Après changements majeurs dans n8n : lancer **`node scripts/export-chatbot-workflow-snapshot.mjs`** puis commit du JSON.
 
 **Build** : filtres RAG metadata = **`--rag-metadata-filters`** (opt-in). Par défaut le script **retire** les metadata filters du nœud Supabase pour éviter 0 résultat tant que les chunks ne sont pas étiquetés.
+
+**Widget ≥ 0.3.7** : le corps JSON peut contenir **`emmaUserId`** (optionnel) si l’ERP passe `userId` au `init`. Le trigger n8n peut l’ignorer ou l’utiliser pour logs / traçabilité ; la **mémoire Postgres** reste indexée sur **`sessionId`**.
