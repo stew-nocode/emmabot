@@ -8,6 +8,7 @@ Ce dossier documente les changements à appliquer dans **n8n** (UI) et **Supabas
 | `system-message-fr-optimise.txt` | Prompt système **raccourci** (remplace l’ancien dans le nœud *AI Agent*). |
 | `../supabase/match_documents.sql` | Mise à jour de la RPC `match_documents` (filtre `metadata`). |
 | `RAG_METADATA.md` | Convention `module` / `produit` sur les chunks + n8n / SQL. |
+| `RAG_EVAL_GRID.md` | Baseline (volume, index, `metadata`) + grille de questions à noter OK/KO. |
 | `../supabase/documents_metadata_gin.sql` | (Optionnel) index GIN sur `documents.metadata`. |
 | `workflows/chatbot.snapshot.json` | Export versionné (secrets Code masqués) — voir `workflows/README.md`. |
 | `../scripts/export-chatbot-workflow-snapshot.mjs` | Régénère le snapshot depuis l’API n8n. |
