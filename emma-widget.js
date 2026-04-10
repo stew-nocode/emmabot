@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  const EMMA_WIDGET_VERSION = '0.3.7';
+  const EMMA_WIDGET_VERSION = '0.3.8';
 
   // ── Already loaded guard ──
   if (global.EmmaChat) return;
@@ -18,8 +18,15 @@
     // sessionId: custom session id string. If omitted, the widget will generate one and persist it in localStorage.
     sessionId: null,
     // userId: identifiant ERP (optionnel). Si défini sans sessionId explicite, la session est isolée par utilisateur
-    // (clé localStorage/sessionStorage dérivée) et le corps JSON inclut emmaUserId pour n8n / logs. Absent = comportement inchangé (démo / tests).
+    // (clé localStorage/sessionStorage dérivée) et le corps JSON inclut userId pour n8n / logs. Absent = comportement inchangé (démo / tests).
     userId: null,
+    // erpSessionId: id de session de connexion applicative ERP (optionnel), envoyé dans le JSON pour logs / audit n8n.
+    erpSessionId: null,
+    // pageUrl: URL ou chemin de l’écran courant (optionnel). Préférer getPageUrl() en SPA pour valeur à jour à chaque message.
+    pageUrl: null,
+    // getErpSessionId / getPageUrl: si définis (fonction sans argument), leur valeur de retour est utilisée à chaque envoi (prioritaire sur les champs statiques).
+    getErpSessionId: null,
+    getPageUrl: null,
     // sessionScope:
     // - "browser" (default): one session per browser (persisted in localStorage)
     // - "tab": one session per tab (persisted in sessionStorage)
@@ -97,6 +104,18 @@
     const v = Number(n);
     if (Number.isNaN(v)) return fallback;
     return Math.min(max, Math.max(min, v));
+  }
+
+  /** Contexte audit ERP : getter prioritaire, sinon chaîne statique ; chaîne vide = omis du JSON. */
+  function resolveAuditContextString(staticVal, getter) {
+    if (typeof getter === 'function') {
+      try {
+        const v = getter();
+        if (v != null && String(v).trim()) return String(v).trim();
+      } catch (_) {}
+    }
+    if (staticVal != null && String(staticVal).trim()) return String(staticVal).trim();
+    return '';
   }
 
   function safeGetLocalStorage() {
@@ -636,6 +655,8 @@
         const emmaSecret = (fromCfg || (fromHeader && String(fromHeader).trim()) || '') || null;
 
         const trimmedUserId = cfg.userId != null && String(cfg.userId).trim();
+        const erpSessionForPayload = resolveAuditContextString(cfg.erpSessionId, cfg.getErpSessionId);
+        const pageUrlForPayload = resolveAuditContextString(cfg.pageUrl, cfg.getPageUrl);
         const res = await fetch(cfg.webhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...extraHeaders },
@@ -645,7 +666,9 @@
             route: cfg.webhookRoute,
             sessionId,
             ...(emmaSecret ? { emmaSecret } : {}),
-            ...(trimmedUserId ? { emmaUserId: trimmedUserId } : {}),
+            ...(trimmedUserId ? { userId: trimmedUserId } : {}),
+            ...(erpSessionForPayload ? { erpSessionId: erpSessionForPayload } : {}),
+            ...(pageUrlForPayload ? { pageUrl: pageUrlForPayload } : {}),
           }),
           signal: controller.signal,
         });

@@ -348,7 +348,10 @@
           "value": {
             "questions_posees": "={{ $('When chat message received').item.json.chatInput }}",
             "reponse_chatbot": "={{ $('AI Agent').item.json.output }}",
-            "session_id": "={{ $('When chat message received').item.json.sessionId }}"
+            "session_id": "={{ $('When chat message received').item.json.sessionId }}",
+            "user_id": "={{ $('When chat message received').item.json.userId ?? '' }}",
+            "erp_session_id": "={{ $('When chat message received').item.json.erpSessionId ?? '' }}",
+            "page_url": "={{ $('When chat message received').item.json.pageUrl ?? '' }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -381,6 +384,36 @@
               "type": "string",
               "readOnly": false,
               "removed": false
+            },
+            {
+              "id": "user_id",
+              "displayName": "user_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "erp_session_id",
+              "displayName": "erp_session_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "page_url",
+              "displayName": "page_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
             }
           ],
           "attemptToConvertTypes": false,
@@ -396,6 +429,27 @@
       ],
       "id": "151fc7bc-f7af-42b9-89a3-89b67da9ee94",
       "name": "Insert row"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=UPDATE n8n_chat_histories SET user_id = '{{ $('When chat message received').item.json.userId ?? \"\" }}', erp_session_id = '{{ $('When chat message received').item.json.erpSessionId ?? \"\" }}', page_url = '{{ $('When chat message received').item.json.pageUrl ?? \"\" }}' WHERE session_id = '{{ $('When chat message received').item.json.sessionId }}' AND (user_id = '' OR user_id IS NULL)",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        500,
+        -200
+      ],
+      "id": "a1b2c3d4-audit-hist-0001-000000000001",
+      "name": "Update Chat History Audit",
+      "credentials": {
+        "postgres": {
+          "id": "A2y4YjLT62NuyLCX",
+          "name": "Postgres tickets Onpoint"
+        }
+      }
     },
     {
       "parameters": {
@@ -430,8 +484,18 @@
             "node": "If",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Update Chat History Audit",
+            "type": "main",
+            "index": 0
           }
         ]
+      ]
+    },
+    "Update Chat History Audit": {
+      "main": [
+        []
       ]
     },
     "Postgres Chat Memory": {
@@ -530,7 +594,13 @@
     },
     "output1": {
       "main": [
-        []
+        [
+          {
+            "node": "Insert row",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
