@@ -61,6 +61,28 @@ En cas de doute : appeler l’outil (meilleure couverture qu’un refus à tort)
 
 - Définir des timeouts raisonnables sur les appels **Azure** / **Supabase** pour éviter les exécutions bloquées.
 
+## 9. Colonnes audit ERP (widget ≥ 0.3.8)
+
+Le widget peut envoyer **`userId`**, **`erpSessionId`** et **`pageUrl`** dans le JSON (optionnels, absents par défaut pour les démos).
+
+### Dans n8n (Data Table « logs chatbot support »)
+
+1. **Ajouter 3 colonnes** à la Data Table (dans l'interface n8n, onglet *Data Tables*, table `logs chatbot support`) :
+   - `user_id` (text)
+   - `erp_session_id` (text)
+   - `page_url` (text)
+2. **Mapper** dans le nœud **Insert row** :
+   - `user_id` ← `{{ $('When chat message received').item.json.userId ?? '' }}`
+   - `erp_session_id` ← `{{ $('When chat message received').item.json.erpSessionId ?? '' }}`
+   - `page_url` ← `{{ $('When chat message received').item.json.pageUrl ?? '' }}`
+3. Le script **`build-n8n-chatbot-put-body.mjs`** applique ces mappings automatiquement (`applyAuditColumnsToInsertRow`).
+
+### Résultat attendu dans la Data Table
+
+| questions_posees | reponse_chatbot | session_id | user_id | erp_session_id | page_url |
+|---|---|---|---|---|---|
+| Comment calculer la paie ? | Voici la procédure… | abc-123 | user42 | erp-sess-789 | /rh/paie |
+
 ---
 
 Après validation en staging : merger la branche Git et **documenter** la date d’application dans n8n (notes du workflow).

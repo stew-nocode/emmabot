@@ -16,6 +16,7 @@ import {
   RAG_TOOL_DESCRIPTION_SIMPLE,
   RAG_TOOL_DESCRIPTION_WITH_FILTERS,
 } from './chatbot-rag-metadata.mjs';
+import { applyAuditColumnsToInsertRow } from './chatbot-audit-columns.mjs';
 
 const args = process.argv.slice(2);
 const useLightChain = args.includes('--light-chain');
@@ -117,6 +118,7 @@ if (useRagMetadataFilters) {
 }
 
 applyPostgresChatMemoryWindow(w, memoryWindow);
+applyAuditColumnsToInsertRow(w);
 
 if (useLightChain) {
   applyLightChain(w);

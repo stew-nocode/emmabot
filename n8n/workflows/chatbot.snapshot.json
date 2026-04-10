@@ -348,7 +348,10 @@
           "value": {
             "questions_posees": "={{ $('When chat message received').item.json.chatInput }}",
             "reponse_chatbot": "={{ $('AI Agent').item.json.output }}",
-            "session_id": "={{ $('When chat message received').item.json.sessionId }}"
+            "session_id": "={{ $('When chat message received').item.json.sessionId }}",
+            "user_id": "={{ $('When chat message received').item.json.userId ?? '' }}",
+            "erp_session_id": "={{ $('When chat message received').item.json.erpSessionId ?? '' }}",
+            "page_url": "={{ $('When chat message received').item.json.pageUrl ?? '' }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -375,6 +378,36 @@
             {
               "id": "session_id",
               "displayName": "session_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "user_id",
+              "displayName": "user_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "erp_session_id",
+              "displayName": "erp_session_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "page_url",
+              "displayName": "page_url",
               "required": false,
               "defaultMatch": false,
               "display": true,
