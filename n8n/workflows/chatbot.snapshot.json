@@ -463,6 +463,28 @@
       ],
       "id": "9e629128-f39a-4b74-8b80-c0117323357a",
       "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "sendTo": "vdakpogan@onpointafrica.com, ekouassi@onpointafrica.com, mngbra@onpointafrica.com, agnaore@onpointafrica.com",
+        "subject": "=⚠️ Emma KB — Question sans réponse : {{ $('When chat message received').item.json.chatInput }}",
+        "message": "=<h2>Question sans réponse dans la base de connaissance</h2><p><strong>Question posée :</strong><br>{{ $('When chat message received').item.json.chatInput }}</p><p><strong>Réponse du chatbot :</strong><br>{{ $('AI Agent').item.json.output }}</p><hr><p><strong>Session ID :</strong> {{ $('When chat message received').item.json.sessionId }}<br><strong>User ID :</strong> {{ $('When chat message received').item.json.userId ?? 'N/A' }}<br><strong>Page :</strong> {{ $('When chat message received').item.json.pageUrl ?? 'N/A' }}<br><strong>Date :</strong> {{ $now.toISO() }}</p><hr><p><em>➡️ Penser à enrichir la KB avec cette information.</em></p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1136,
+        400
+      ],
+      "id": "b2c3d4e5-alert-mail-0001-000000000001",
+      "name": "Alerte KB manquante",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "dCta90mUtnu2yZgn",
+          "name": "Gmail Onpoint"
+        }
+      }
     }
   ],
   "connections": {
@@ -599,8 +621,18 @@
             "node": "Insert row",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Alerte KB manquante",
+            "type": "main",
+            "index": 0
           }
         ]
+      ]
+    },
+    "Alerte KB manquante": {
+      "main": [
+        []
       ]
     }
   },
