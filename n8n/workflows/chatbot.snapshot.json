@@ -432,6 +432,27 @@
     },
     {
       "parameters": {
+        "operation": "executeQuery",
+        "query": "=UPDATE n8n_chat_histories SET user_id = '{{ $('When chat message received').item.json.userId ?? \"\" }}', erp_session_id = '{{ $('When chat message received').item.json.erpSessionId ?? \"\" }}', page_url = '{{ $('When chat message received').item.json.pageUrl ?? \"\" }}' WHERE session_id = '{{ $('When chat message received').item.json.sessionId }}' AND (user_id = '' OR user_id IS NULL)",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        500,
+        -200
+      ],
+      "id": "a1b2c3d4-audit-hist-0001-000000000001",
+      "name": "Update Chat History Audit",
+      "credentials": {
+        "postgres": {
+          "id": "A2y4YjLT62NuyLCX",
+          "name": "Postgres tickets Onpoint"
+        }
+      }
+    },
+    {
+      "parameters": {
         "jsCode": "const expected = 'REDACTED_Emma_SECRET';\n\nconst headers =\n  $json?.headers ??\n  $input.first()?.json?.headers ??\n  {};\n\nconst got =\n  headers['x-emma-secret'] ||\n  headers['X-Emma-Secret'] ||\n  $json?.emmaSecret ||\n  $input.first()?.json?.emmaSecret;\n\nif (got !== expected) {\n  throw new Error('Unauthorized: secret manquant ou invalide');\n}\n\nreturn $input.all();"
       },
       "type": "n8n-nodes-base.code",
@@ -463,8 +484,18 @@
             "node": "If",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Update Chat History Audit",
+            "type": "main",
+            "index": 0
           }
         ]
+      ]
+    },
+    "Update Chat History Audit": {
+      "main": [
+        []
       ]
     },
     "Postgres Chat Memory": {
@@ -563,7 +594,13 @@
     },
     "output1": {
       "main": [
-        []
+        [
+          {
+            "node": "Insert row",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
