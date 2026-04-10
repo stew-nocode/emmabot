@@ -351,7 +351,9 @@
             "session_id": "={{ $('When chat message received').item.json.sessionId }}",
             "user_id": "={{ $('When chat message received').item.json.userId ?? '' }}",
             "erp_session_id": "={{ $('When chat message received').item.json.erpSessionId ?? '' }}",
-            "page_url": "={{ $('When chat message received').item.json.pageUrl ?? '' }}"
+            "page_url": "={{ $('When chat message received').item.json.pageUrl ?? '' }}",
+            "traite": "={{ 'non' }}",
+            "priorite": "={{ 'normale' }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -408,6 +410,26 @@
             {
               "id": "page_url",
               "displayName": "page_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "traite",
+              "displayName": "traite",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "priorite",
+              "displayName": "priorite",
               "required": false,
               "defaultMatch": false,
               "display": true,

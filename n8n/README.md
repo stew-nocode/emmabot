@@ -20,3 +20,5 @@ Après changements majeurs dans n8n : lancer **`node scripts/export-chatbot-work
 **Widget ≥ 0.3.7** : le corps JSON peut contenir **`userId`** (optionnel) si l'ERP passe `userId` au `init`. Le trigger n8n peut l'ignorer ou l'utiliser pour logs / traçabilité ; la **mémoire Postgres** reste indexée sur **`sessionId`**.
 
 **Widget ≥ 0.3.8** : champs optionnels supplémentaires pour l'audit — **`erpSessionId`**, **`pageUrl`** (et getters **`getErpSessionId` / `getPageUrl`** côté widget, non visibles dans le JSON). À mapper dans le nœud **Insert row** / Data Table (ou équivalent) quand les colonnes existent.
+
+**Data Table** : colonnes **`traite`** / **`priorite`** (voir `GUIDE_OPTIMISATION_N8N.md` section 10) — le rapport hebdo filtre le backlog sur `traite` ≠ oui.

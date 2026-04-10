@@ -83,6 +83,22 @@ Le widget peut envoyer **`userId`**, **`erpSessionId`** et **`pageUrl`** dans le
 |---|---|---|---|---|---|
 | Comment calculer la paie ? | Voici la procédure… | abc-123 | user42 | erp-sess-789 | /rh/paie |
 
+## 10. Colonnes statut KB (`traite`, `priorite`)
+
+Pour ne pas revoir les mêmes sujets dans le **rapport hebdo** (section « À documenter »), chaque ligne de log peut être marquée comme traitée.
+
+### Dans la Data Table « logs chatbot support »
+
+1. **Ajouter 2 colonnes** (type **string**) si elles n’existent pas encore :
+   - `traite` — valeurs usuelles : `non` (défaut), `oui` quand la KB a été enrichie ou la question classée sans action.
+   - `priorite` — défaut `normale` ; optionnel : `basse`, `haute` (pour tri manuel ou future app support).
+
+2. Le nœud **Insert row** du workflow **chatbot** renseigne à chaque nouveau log : `traite` = `non`, `priorite` = `normale` (voir snapshot + `applyAuditColumnsToInsertRow`).
+
+3. **Traitement manuel** : dans l’interface Data Tables, passer `traite` à `oui` sur les lignes concernées.
+
+4. **Rapport hebdomadaire** : la liste « À documenter (non traités) » ne garde que les lignes **sans réponse KB** dont `traite` n’est pas `oui`. Les lignes anciennes **sans** colonne `traite` sont considérées comme **non traitées** (rétrocompat).
+
 ---
 
 Après validation en staging : merger la branche Git et **documenter** la date d’application dans n8n (notes du workflow).

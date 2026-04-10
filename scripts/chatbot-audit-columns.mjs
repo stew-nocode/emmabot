@@ -1,10 +1,16 @@
 /**
  * Ajoute les colonnes audit ERP (user_id, erp_session_id, page_url)
- * au nœud « Insert row » (Data Table) du workflow chatbot,
+ * et statut KB (traite, priorite) au nœud « Insert row » (Data Table),
  * si elles ne sont pas déjà présentes.
  */
 
 const TRIGGER_NODE = 'When chat message received';
+
+/** Valeurs par défaut à chaque nouveau log (support met traite à oui quand la KB est enrichie). */
+const STATUS_COLUMNS = [
+  { id: 'traite', expression: "={{ 'non' }}" },
+  { id: 'priorite', expression: "={{ 'normale' }}" },
+];
 
 const AUDIT_COLUMNS = [
   {
@@ -40,7 +46,8 @@ export function applyAuditColumnsToInsertRow(workflow) {
     const cols = node.parameters?.columns;
     if (!cols) continue;
 
-    for (const col of AUDIT_COLUMNS) {
+    const allCols = [...AUDIT_COLUMNS, ...STATUS_COLUMNS];
+    for (const col of allCols) {
       if (!cols.value[col.id]) {
         cols.value[col.id] = col.expression;
       }

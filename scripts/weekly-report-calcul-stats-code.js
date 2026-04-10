@@ -21,6 +21,18 @@ const sansReponse = recent.filter(
 const nbSansReponse = sansReponse.length;
 const tauxReponse = total > 0 ? Math.round(((total - nbSansReponse) / total) * 100) : 0;
 
+/** Ligne marquée traitée dans la Data Table (colonne traite). Absent / vide = non traité (rétrocompat). */
+function isRowTraite(r) {
+  const t = r.traite;
+  if (t === undefined || t === null) return false;
+  const s = String(t).trim().toLowerCase();
+  if (s === '') return false;
+  return s === 'oui' || s === 'yes' || s === 'true' || s === '1' || s === 'traite' || s === 'ok';
+}
+
+const sansReponseOuverts = sansReponse.filter((r) => !isRowTraite(r));
+const nbSansReponseOuverts = sansReponseOuverts.length;
+
 const qCount = {};
 recent.forEach((r) => {
   if (r.questions_posees) qCount[r.questions_posees] = (qCount[r.questions_posees] || 0) + 1;
@@ -37,10 +49,9 @@ const topUsers = Object.entries(uCount)
   .sort((a, b) => b[1] - a[1])
   .slice(0, 5);
 
-const sansReponseUniq = [...new Set(sansReponse.map((r) => r.questions_posees).filter(Boolean))].slice(
-  0,
-  10,
-);
+const sansReponseUniq = [
+  ...new Set(sansReponseOuverts.map((r) => r.questions_posees).filter(Boolean)),
+].slice(0, 10);
 
 const dateRange = `${sevenDaysAgo.toLocaleDateString('fr-FR')} → ${now.toLocaleDateString('fr-FR')}`;
 
@@ -77,7 +88,7 @@ const sansRepHtml = sansReponseUniq.length
           `<li style="margin:0 0 12px 0;padding:12px 14px 12px 16px;background:#fffbeb;border-radius:8px;border-left:4px solid #f59e0b;color:#422006;font-size:14px;line-height:1.45;">${escapeHtml(q)}</li>`,
       )
       .join('')}</ul>`
-  : '<p style="margin:0;font-size:14px;color:#047857;">Aucune question sans réponse KB sur cette période.</p>';
+  : '<p style="margin:0;font-size:14px;color:#047857;">Aucun sujet ouvert : tout est traité ou aucun trou KB sur la période.</p>';
 
 const avecKb = total - nbSansReponse;
 
@@ -113,8 +124,9 @@ const html = `<!DOCTYPE html>
 </td>
 <td width="33.33%" style="padding:6px;vertical-align:top;">
 <div style="background:#fff7ed;border-radius:12px;padding:18px 12px;text-align:center;border:1px solid #fed7aa;">
-<div style="font-size:26px;font-weight:700;color:#c2410c;line-height:1;">${nbSansReponse}</div>
-<div style="font-size:11px;font-weight:600;color:#9a3412;text-transform:uppercase;letter-spacing:0.08em;margin-top:8px;">Sans KB</div>
+<div style="font-size:26px;font-weight:700;color:#c2410c;line-height:1;">${nbSansReponseOuverts}</div>
+<div style="font-size:11px;font-weight:600;color:#9a3412;text-transform:uppercase;letter-spacing:0.08em;margin-top:8px;">Backlog (non traités)</div>
+<div style="font-size:12px;color:#b45309;margin-top:6px;line-height:1.35;">${nbSansReponse} sans réponse KB sur 7 j.</div>
 </div>
 </td>
 </tr>
@@ -135,7 +147,8 @@ const html = `<!DOCTYPE html>
 </tr>
 <tr>
 <td style="background:#ffffff;padding:8px 28px 32px 28px;border-left:1px solid #cbd5e1;border-right:1px solid #cbd5e1;border-radius:0 0 14px 14px;border-bottom:1px solid #cbd5e1;">
-<p style="margin:0 0 14px 0;font-size:13px;font-weight:600;color:#0f172a;text-transform:uppercase;letter-spacing:0.1em;">À documenter dans la base</p>
+<p style="margin:0 0 6px 0;font-size:13px;font-weight:600;color:#0f172a;text-transform:uppercase;letter-spacing:0.1em;">À documenter (non traités)</p>
+<p style="margin:0 0 14px 0;font-size:12px;color:#64748b;">Colonne <strong>traite</strong> = oui dans la Data Table une fois la KB mise à jour.</p>
 ${sansRepHtml}
 </td>
 </tr>
