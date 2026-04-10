@@ -99,6 +99,8 @@ Pour ne pas revoir les mêmes sujets dans le **rapport hebdo** (section « À do
 
 4. **Rapport hebdomadaire** : la liste « À documenter (non traités) » ne garde que les lignes **sans réponse KB** dont `traite` n’est pas `oui`. Les lignes anciennes **sans** colonne `traite` sont considérées comme **non traitées** (rétrocompat).
 
+5. **Regroupement & bruit (rapport)** : le nœud *Calcul stats hebdo* fusionne les formulations **proches** (casse, accents, ponctuation) pour le **top questions** et **À documenter** ; affiche `(N×)` si plusieurs occurrences. Les **totaux** (volume, taux KB, backlog chiffré) restent sur **toutes** les lignes. Les phrases sans objet métier (ex. « ensuite », « cherche bien », « merci ») sont **exclues des listes** uniquement — à ajuster dans `scripts/weekly-report-calcul-stats-code.js` (`LOW_SIGNAL_EXACT` / règles courtes) si besoin. Pour un regroupement **sémantique** (synonymes, reformulations lointaines), il faudrait une étape embeddings + cluster (hors scope du script actuel).
+
 ---
 
 Après validation en staging : merger la branche Git et **documenter** la date d’application dans n8n (notes du workflow).
