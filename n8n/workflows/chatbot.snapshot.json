@@ -168,122 +168,6 @@
     },
     {
       "parameters": {
-        "operation": "append",
-        "documentId": {
-          "__rl": true,
-          "value": "1KVfvW_5jmw6Z9AQPdO7UX9APpX-yy7qzlUDWFPB7CGo",
-          "mode": "list",
-          "cachedResultName": "Logs",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1KVfvW_5jmw6Z9AQPdO7UX9APpX-yy7qzlUDWFPB7CGo/edit?usp=drivesdk"
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": "gid=0",
-          "mode": "list",
-          "cachedResultName": "Liste des assistances à remplir",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1KVfvW_5jmw6Z9AQPdO7UX9APpX-yy7qzlUDWFPB7CGo/edit#gid=0"
-        },
-        "columns": {
-          "mappingMode": "defineBelow",
-          "value": {
-            "Questions posées ?": "={{ $('When chat message received').item.json.chatInput }}",
-            "Réponses du chatbot": "={{ $json['Réponses'] }}",
-            "sessionid": "={{ $('When chat message received').item.json.sessionId }}"
-          },
-          "matchingColumns": [],
-          "schema": [
-            {
-              "id": "Questions posées ?",
-              "displayName": "Questions posées ?",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "Réponses du chatbot",
-              "displayName": "Réponses du chatbot",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "sessionid",
-              "displayName": "sessionid",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            }
-          ],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": false
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.7,
-      "position": [
-        1696,
-        -304
-      ],
-      "id": "7a5baa24-34e7-4591-ae4d-31aa16ed0c8f",
-      "name": "logs",
-      "disabled": true
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "03061d72-742c-4a79-adee-d7aab449e509",
-              "name": "output",
-              "value": "={{ $('AI Agent').item.json.output }}",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        1264,
-        -16
-      ],
-      "id": "433a3730-dd8b-4488-b785-1d27f5d67270",
-      "name": "output"
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "03061d72-742c-4a79-adee-d7aab449e509",
-              "name": "output",
-              "value": "={{ $('AI Agent').item.json.output }}",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        1136,
-        224
-      ],
-      "id": "ac311c40-2997-4f02-af08-6890034f30a8",
-      "name": "output1"
-    },
-    {
-      "parameters": {
         "public": true,
         "initialMessages": "Je suis l'assistant du support OBC.\nComment puis-je vous aider aujourd'hui ?",
         "options": {
@@ -563,21 +447,26 @@
       "main": [
         [
           {
-            "node": "output",
+            "node": "Insert row",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Filtre bruit alerte",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "output1",
+            "node": "Insert row",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "logs": {
+    "Insert row": {
       "main": [
         []
       ]
@@ -593,43 +482,11 @@
         ]
       ]
     },
-    "Insert row": {
-      "main": [
-        []
-      ]
-    },
     "Code in JavaScript1": {
       "main": [
         [
           {
             "node": "AI Agent",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "output": {
-      "main": [
-        [
-          {
-            "node": "Insert row",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "output1": {
-      "main": [
-        [
-          {
-            "node": "Insert row",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Filtre bruit alerte",
             "type": "main",
             "index": 0
           }
