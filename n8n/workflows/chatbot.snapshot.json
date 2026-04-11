@@ -126,15 +126,6 @@
           },
           "conditions": [
             {
-              "id": "afdca75d-0cb2-4dda-9ffb-c51181114bee",
-              "leftValue": "={{ $json.output }}",
-              "rightValue": "Je n'ai pas cette information dans ma base de connaissance. Je transmets immédiatement votre préoccupation au support qui vous reprendra rapidement. Avez-vous d'autres questions ?",
-              "operator": {
-                "type": "string",
-                "operation": "contains"
-              }
-            },
-            {
               "id": "2c1f5c81-5519-4482-8570-5cc613063cb8",
               "leftValue": "={{ $json.output }}",
               "rightValue": "Je n'ai pas cette information",
@@ -146,39 +137,19 @@
             {
               "id": "8d37db7e-e399-46a6-9947-b1e44e97d0a2",
               "leftValue": "={{ $json.output }}",
-              "rightValue": "Je transmets immédiatement votre préoccupation",
+              "rightValue": "Je transmets immédiatement",
               "operator": {
                 "type": "string",
                 "operation": "contains"
-              }
-            },
-            {
-              "id": "57f5ca13-fbdd-4136-bd54-79a0dc1a7b5f",
-              "leftValue": "={{ $json.output }}",
-              "rightValue": "Je transmets",
-              "operator": {
-                "type": "string",
-                "operation": "contains"
-              }
-            },
-            {
-              "id": "e98e336c-6b66-44a0-9be4-313db7e34492",
-              "leftValue": "={{ $json.output }}",
-              "rightValue": "Je n'ai pas ",
-              "operator": {
-                "type": "string",
-                "operation": "equals",
-                "name": "filter.operator.equals"
               }
             },
             {
               "id": "92e683a4-10d0-4f89-8e76-06f33d381f5f",
               "leftValue": "={{ $json.output }}",
-              "rightValue": "ne concerne pas",
+              "rightValue": "ne concerne pas l'ERP OBC",
               "operator": {
                 "type": "string",
-                "operation": "equals",
-                "name": "filter.operator.equals"
+                "operation": "contains"
               }
             }
           ],
