@@ -478,6 +478,19 @@
           "name": "Gmail Onpoint"
         }
       }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filtre bruit : ne laisse passer que les questions avec une substance métier réelle.\n// Même logique que le rapport hebdo (LOW_SIGNAL_EXACT + règles courtes).\nconst LOW_SIGNAL = new Set([\n  'ensuite','et ensuite','et apres','apres','alors','donc','voila',\n  'cherche bien','cherche encore','regarde bien','tu peux chercher',\n  'reflechis','continue','vas y','vasy',\n  'oui','non','ok','okay','merci','merci beaucoup',\n  'd accord','dacord','ah ok','super','parfait','top','nickel','niquel','cool',\n  'bah','ben','euh','hm','hmm','ouais','nan','na','lol','haha','gg',\n  'hello','bonjour','salut','hey','coucou',\n]);\n\nfunction normalize(s) {\n  return String(s)\n    .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '')\n    .toLowerCase()\n    .replace(/[''`´]/g, ' ')\n    .replace(/[^\\w\\s]/gi, ' ')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\nconst question = $input.first()?.json?.chatInput ||\n  $('When chat message received').item?.json?.chatInput || '';\n\nconst k = normalize(question);\nconst words = k.split(/\\s+/).filter(Boolean);\n\n// Exclure : vide, trop court, dans la liste, ou moins de 4 mots sans chiffre ni terme technique\nif (!k || k.length < 8 || LOW_SIGNAL.has(k) || words.length < 3) {\n  return [];\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1136,
+        560
+      ],
+      "id": "f1lt3r-kb-alert-0001-000000000001",
+      "name": "Filtre bruit alerte"
     }
   ],
   "connections": {
@@ -615,6 +628,17 @@
             "type": "main",
             "index": 0
           },
+          {
+            "node": "Filtre bruit alerte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtre bruit alerte": {
+      "main": [
+        [
           {
             "node": "Alerte KB manquante",
             "type": "main",
