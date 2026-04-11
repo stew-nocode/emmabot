@@ -1,0 +1,138 @@
+{
+  "meta": {
+    "workflowId": "Gn8ihoga8I325GYa",
+    "workflowName": "alerte-backlog-kb",
+    "exportedAt": "2026-04-11T00:00:00.000Z",
+    "description": "Chaque lundi matin : compte les questions non traitées dans la Data Table. Si le backlog dépasse le seuil, envoie un mail de relance à l'équipe KB."
+  },
+  "name": "alerte-backlog-kb",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "weeksInterval": 1,
+              "triggerAtDay": [1],
+              "triggerAtHour": 8,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-200, 0],
+      "id": "sched-backlog-0001-000000000001",
+      "name": "Chaque lundi 8h"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "dataTableId": {
+          "__rl": true,
+          "value": "ZD9dFgpD9aIdBznq",
+          "mode": "list",
+          "cachedResultName": "logs chatbot support",
+          "cachedResultUrl": "/projects/FWqhhc90z90D3dtH/datatables/ZD9dFgpD9aIdBznq"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [0, 0],
+      "id": "dt-backlog-read-0001-000000000001",
+      "name": "Lire logs"
+    },
+    {
+      "parameters": {
+        "jsCode": "const SEUIL = 5; // Modifier ici pour ajuster le seuil d'alerte\nconst rows = $input.all().map(i => i.json);\n\nfunction isTraite(r) {\n  const t = r.traite;\n  if (t === undefined || t === null) return false;\n  const s = String(t).trim().toLowerCase();\n  if (s === '') return false;\n  return ['oui','yes','true','1','traite','ok'].includes(s);\n}\n\nconst nonTraites = rows.filter(r => !isTraite(r));\nconst nbTotal = rows.length;\nconst nbNonTraites = nonTraites.length;\n\n// Top 5 questions non traitées les plus récentes pour le mail\nconst apercu = nonTraites\n  .filter(r => r.questions_posees && r.questions_posees.trim().length > 0)\n  .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))\n  .slice(0, 5)\n  .map(r => r.questions_posees.trim());\n\nreturn [{\n  json: {\n    nbNonTraites,\n    nbTotal,\n    apercu,\n    seuil: SEUIL,\n    seuilDepasse: nbNonTraites >= SEUIL,\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [200, 0],
+      "id": "code-backlog-calc-0001-000000000001",
+      "name": "Calcul backlog"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cond-seuil-0001",
+              "leftValue": "={{ $json.seuilDepasse }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [400, 0],
+      "id": "if-seuil-0001-000000000001",
+      "name": "Seuil dépassé ?"
+    },
+    {
+      "parameters": {
+        "sendTo": "vdakpogan@onpointafrica.com, ekouassi@onpointafrica.com, mngbra@onpointafrica.com, agnaore@onpointafrica.com",
+        "subject": "=⚠️ KB Emma — {{ $json.nbNonTraites }} question(s) non traitée(s) en attente",
+        "message": "=<div style=\"font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;background:#f1f5f9;padding:24px 12px;\">\n<div style=\"max-width:560px;margin:0 auto;background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;\">\n<div style=\"background:linear-gradient(135deg,#0f172a,#1e293b);padding:24px 28px;\">\n<p style=\"margin:0 0 4px;font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#94a3b8;\">Assistant IA — Suivi KB</p>\n<h1 style=\"margin:0;font-size:20px;font-weight:700;color:#f8fafc;\">Backlog à documenter</h1>\n</div>\n<div style=\"padding:24px 28px;\">\n<div style=\"background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:16px 20px;margin-bottom:20px;\">\n<p style=\"margin:0 0 4px;font-size:28px;font-weight:700;color:#c2410c;\">{{ $json.nbNonTraites }}</p>\n<p style=\"margin:0;font-size:13px;color:#9a3412;font-weight:600;\">question(s) sans réponse KB — non traitée(s)</p>\n<p style=\"margin:6px 0 0;font-size:12px;color:#b45309;\">Seuil configuré : {{ $json.seuil }} · Total logs : {{ $json.nbTotal }}</p>\n</div>\n{{ $json.apercu.length > 0 ? '<p style=\"margin:0 0 10px;font-size:13px;font-weight:600;color:#0f172a;text-transform:uppercase;letter-spacing:0.08em;\">Aperçu des plus récentes</p><ul style=\"margin:0;padding:0;list-style:none;\">' + $json.apercu.map(q => '<li style=\"margin:0 0 8px;padding:10px 14px 10px 14px;background:#fffbeb;border-radius:8px;border-left:4px solid #f59e0b;font-size:13px;color:#422006;\">' + q + '</li>').join('') + '</ul>' : '' }}\n<hr style=\"margin:20px 0;border:0;border-top:1px solid #f1f5f9;\">\n<p style=\"margin:0;font-size:12px;color:#64748b;line-height:1.6;\">➡️ Ouvrir la Data Table <strong>logs chatbot support</strong> dans n8n, enrichir la KB et passer <strong>traite = oui</strong> une fois fait.<br>Le prochain rapport hebdo reflétera les changements.</p>\n</div>\n</div>\n</div>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [640, -80],
+      "id": "gmail-backlog-alert-0001-000000000001",
+      "name": "Mail alerte backlog",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "dCta90mUtnu2yZgn",
+          "name": "Gmail Onpoint"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Chaque lundi 8h": {
+      "main": [[{ "node": "Lire logs", "type": "main", "index": 0 }]]
+    },
+    "Lire logs": {
+      "main": [[{ "node": "Calcul backlog", "type": "main", "index": 0 }]]
+    },
+    "Calcul backlog": {
+      "main": [[{ "node": "Seuil dépassé ?", "type": "main", "index": 0 }]]
+    },
+    "Seuil dépassé ?": {
+      "main": [
+        [{ "node": "Mail alerte backlog", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Mail alerte backlog": {
+      "main": [[]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "timezone": "Europe/Paris"
+  },
+  "staticData": null
+}
