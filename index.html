@@ -21,15 +21,15 @@
     h1 { font-size: 24px; font-weight: 600; }
     p { font-size: 15px; color: #6b7280; }
     .btn {
-      background: #3B5BDB; color: #fff; border: none;
+      background: #2563EB; color: #fff; border: none;
       border-radius: 12px; padding: 12px 28px;
       font-size: 15px; font-weight: 500; font-family: inherit;
       cursor: pointer; transition: opacity 0.2s;
     }
     .btn:hover { opacity: 0.88; }
     .btn-outline {
-      background: none; color: #3B5BDB;
-      border: 1.5px solid #3B5BDB;
+      background: none; color: #2563EB;
+      border: 1.5px solid #2563EB;
       border-radius: 12px; padding: 12px 28px;
       font-size: 15px; font-weight: 500; font-family: inherit;
       cursor: pointer; transition: background 0.15s;
@@ -37,14 +37,14 @@
     .btn-outline:hover { background: #EEF0F5; }
     .actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
     .badge {
-      background: #EEF0F5; color: #3B5BDB;
+      background: #EEF0F5; color: #2563EB;
       border-radius: 20px; padding: 4px 14px;
       font-size: 13px; font-weight: 500;
     }
   </style>
 
   <!-- ① Charger le widget -->
-  <script src="emma-widget.js?v=0.4.5"></script>
+  <script src="emma-widget.js?v=0.4.6"></script>
   <!-- Config locale (secret N8N) : copier local.config.example.js → local.config.js (non versionné) -->
   <script src="local.config.js"></script>
 </head>
@@ -79,7 +79,7 @@
         'Comment enregistrer un bon de commande ?',
         'Comment générer des états financiers ?',
       ],
-      primaryColor: '#3B5BDB',
+      primaryColor: '#2563EB',
       position:     'right',
       widgetWidth:  380,
       widgetHeight: 580,

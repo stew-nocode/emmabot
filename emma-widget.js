@@ -1,10 +1,32 @@
 (function (global) {
   'use strict';
 
-  const EMMA_WIDGET_VERSION = '0.4.5';
+  const EMMA_WIDGET_VERSION = '0.4.6';
 
   // ── Already loaded guard ──
   if (global.EmmaChat) return;
+
+  /** URL absolue du script (pour résoudre logoUrl relative quand le widget est sur une autre page que les assets). */
+  const EMMA_WIDGET_SCRIPT_URL = (function () {
+    try {
+      if (typeof document === 'undefined') return '';
+      var cs = document.currentScript;
+      if (cs && cs.src) return String(cs.src);
+      var scripts = document.getElementsByTagName('script');
+      for (var i = scripts.length - 1; i >= 0; i--) {
+        var el = scripts[i];
+        var src = el.getAttribute('src') || el.src || '';
+        if (/emma-widget\.js/i.test(String(src))) {
+          try {
+            return new URL(src, document.baseURI).href;
+          } catch (_) {
+            return String(src);
+          }
+        }
+      }
+    } catch (_) {}
+    return '';
+  })();
 
   // ── Default config ──
   const DEFAULTS = {
@@ -49,7 +71,7 @@
     typingLabel: 'En train d\'écrire…',
     suggestions: [],
     position: 'right',       // 'right' | 'left'
-    primaryColor: '#3B5BDB',
+    primaryColor: '#2563EB',
     launcherSize: 62,
     widgetWidth: 380,
     widgetHeight: 580,
@@ -97,17 +119,40 @@
     return DEFAULTS.primaryColor;
   }
 
-  /** URL d’image / logo : http(s) ou chemin relatif sûr (pas //…). */
+  /** URL d’image / logo : http(s), file (local), chemin absolu /… (pas //…). */
   function sanitizeImageUrl(raw, fallback) {
     const u = String(raw || '').trim();
     if (!u) return fallback;
     if (/^https:\/\//i.test(u) || /^http:\/\//i.test(u)) return u;
+    if (/^file:\/\//i.test(u)) return u;
     if (u.startsWith('/') && !u.startsWith('//')) return u;
     try {
       const p = new URL(u, typeof document !== 'undefined' ? document.baseURI : 'https://invalid/');
-      if (p.protocol === 'https:' || p.protocol === 'http:') return p.href;
+      if (p.protocol === 'https:' || p.protocol === 'http:' || p.protocol === 'file:') return p.href;
     } catch (_) {}
     return fallback;
+  }
+
+  /** Résout logoUrl relative par rapport à emma-widget.js (sinon la page hôte cassait l’avatar en intégration ERP). */
+  function resolveLogoUrl(raw) {
+    var u = String(raw == null ? '' : raw).trim();
+    if (!u) u = String(DEFAULTS.logoUrl);
+    if (/^https?:\/\//i.test(u)) return u;
+    if (u.startsWith('/')) {
+      if (u.startsWith('//')) return resolveLogoUrl(DEFAULTS.logoUrl);
+      try {
+        if (typeof document !== 'undefined') return new URL(u, document.baseURI).href;
+      } catch (_) {}
+      return u;
+    }
+    var base = EMMA_WIDGET_SCRIPT_URL;
+    if (!base && typeof document !== 'undefined') base = document.baseURI;
+    if (!base) return u;
+    try {
+      return new URL(u, base).href;
+    } catch (_) {
+      return u;
+    }
   }
 
   function clampNum(n, min, max, fallback) {
@@ -296,6 +341,11 @@
         width:30px; height:30px; border-radius:50%;
         background:#D0D8F8; flex-shrink:0;
         display:flex; align-items:center; justify-content:center;
+        overflow:hidden;
+      }
+      .emma-bot-avatar img {
+        width:100%; height:100%; object-fit:cover; border-radius:50%;
+        display:block;
       }
       .emma-bot-block {
         display:flex; flex-direction:column; gap:6px;
@@ -614,7 +664,12 @@
     document.body.appendChild(widget);
 
     // ── Event listeners ──
-    const botAvatarSVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${cfg.primaryColor}" stroke-width="2.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
+    const botAvatarInner =
+      '<img src="' +
+      escapeAttrStr(cfg.logoUrl) +
+      '" alt="' +
+      escapeAttrStr(cfg.agentName) +
+      '" decoding="async" loading="lazy" onerror="this.style.display=\'none\'">';
 
     launcher.addEventListener('click', () => toggle());
     widget.querySelector('#emma-close').addEventListener('click', () => close());
@@ -980,7 +1035,7 @@
       block.className = 'emma-bot-block';
       block.innerHTML = `<div class="emma-bot-name-label">${escapeHtmlStr(cfg.agentName)}</div>`;
       block.appendChild(msgDiv);
-      row.innerHTML = `<div class="emma-bot-avatar">${botAvatarSVG}</div>`;
+      row.innerHTML = '<div class="emma-bot-avatar">' + botAvatarInner + '</div>';
       row.appendChild(block);
       elMessages.appendChild(row);
       scrollBottom();
@@ -989,7 +1044,7 @@
     function addThinking() {
       const row = document.createElement('div');
       row.className = 'emma-bot-row';
-      row.innerHTML = `<div class="emma-bot-avatar">${botAvatarSVG}</div>`;
+      row.innerHTML = '<div class="emma-bot-avatar">' + botAvatarInner + '</div>';
       const block = document.createElement('div');
       block.className = 'emma-bot-block';
       const nameLabel = document.createElement('div');
@@ -1248,7 +1303,7 @@
     init: function (options) {
       const cfg = Object.assign({}, DEFAULTS, options);
       cfg.primaryColor = sanitizePrimaryColor(cfg.primaryColor);
-      cfg.logoUrl = sanitizeImageUrl(cfg.logoUrl, DEFAULTS.logoUrl);
+      cfg.logoUrl = sanitizeImageUrl(resolveLogoUrl(cfg.logoUrl), DEFAULTS.logoUrl);
       cfg.position = String(cfg.position || '').toLowerCase() === 'left' ? 'left' : 'right';
       cfg.launcherSize = clampNum(cfg.launcherSize, 44, 120, DEFAULTS.launcherSize);
       cfg.widgetWidth = clampNum(cfg.widgetWidth, 280, 560, DEFAULTS.widgetWidth);
