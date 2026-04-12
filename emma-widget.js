@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  const EMMA_WIDGET_VERSION = '0.4.1';
+  const EMMA_WIDGET_VERSION = '0.4.2';
 
   // ── Already loaded guard ──
   if (global.EmmaChat) return;
@@ -63,6 +63,8 @@
     satisfactionEnabled: true,
     // satisfactionWebhookPath: path relatif au domaine n8n (déduit de webhookUrl).
     satisfactionWebhookPath: 'chatbot-satisfaction',
+    // Texte discret sous la réponse (vote satisfaction), personnalisable.
+    feedbackPromptText: 'Cette réponse vous a-t-elle été utile ?',
   };
 
   /** Échappement HTML (contenu texte / nœuds). */
@@ -411,8 +413,17 @@
       }
       @keyframes emmaSpin { to { transform:rotate(360deg); } }
 
+      .emma-feedback-strip {
+        margin-top:8px; padding-top:2px;
+        align-self:stretch; max-width:100%;
+      }
+      .emma-feedback-prompt {
+        font-size:10.5px; line-height:1.35; color:#9ca3af;
+        margin:0 0 4px 1px; letter-spacing:0.01em;
+      }
+      .emma-feedback-strip.emma-feedback-done .emma-feedback-prompt { opacity:0.55; }
       .emma-feedback-row {
-        display:flex; gap:4px; padding-left:39px; margin-top:2px;
+        display:flex; gap:2px; align-items:center;
       }
       .emma-feedback-btn {
         background:transparent; border:none; cursor:pointer;
@@ -1061,6 +1072,19 @@
       if (!cfg.satisfactionEnabled || !satisfactionUrl) return;
       if (!botRow || !botRow.isConnected) return;
 
+      const block = botRow.querySelector('.emma-bot-block');
+      if (!block) return;
+
+      const strip = document.createElement('div');
+      strip.className = 'emma-feedback-strip';
+
+      const prompt = document.createElement('div');
+      prompt.className = 'emma-feedback-prompt';
+      prompt.textContent =
+        cfg.feedbackPromptText != null && String(cfg.feedbackPromptText).trim()
+          ? String(cfg.feedbackPromptText).trim()
+          : 'Cette réponse vous a-t-elle été utile ?';
+
       const feedbackRow = document.createElement('div');
       feedbackRow.className = 'emma-feedback-row';
 
@@ -1076,11 +1100,14 @@
 
       feedbackRow.appendChild(btnPos);
       feedbackRow.appendChild(btnNeg);
-      botRow.appendChild(feedbackRow);
+      strip.appendChild(prompt);
+      strip.appendChild(feedbackRow);
+      block.appendChild(strip);
 
       function sendVote(satisfaction) {
         btnPos.disabled = true;
         btnNeg.disabled = true;
+        strip.classList.add('emma-feedback-done');
         const clicked = satisfaction === 'positif' ? btnPos : btnNeg;
         clicked.classList.add('voted', satisfaction);
 
