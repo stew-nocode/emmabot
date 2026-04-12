@@ -2,10 +2,13 @@
      EMMA WIDGET — Snippet d'intégration ERP
      À placer dans le <head> ou juste avant </body>.
      ================================================================ -->
-<script src="https://stew-nocode.github.io/emmabot/emma-widget.js?v=0.3.8"></script>
+<script src="https://stew-nocode.github.io/emmabot/emma-widget.js?v=0.4.5"></script>
 
 <script>
   EmmaChat.init({
+
+    // Avatar (optionnel) : même origine que la page ou URL absolue — défaut du widget : emma-avatar.png sur GitHub Pages.
+    // logoUrl: "https://stew-nocode.github.io/emmabot/emma-avatar.png",
 
     // URL du webhook n8n qui reçoit les messages du chatbot.
     webhookUrl: "VOTRE_URL_WEBHOOK_N8N",

@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  const EMMA_WIDGET_VERSION = '0.4.4';
+  const EMMA_WIDGET_VERSION = '0.4.5';
 
   // ── Already loaded guard ──
   if (global.EmmaChat) return;
@@ -40,7 +40,7 @@
     httpErrorMessage: null,
     agentName: 'Emma',
     agentStatus: 'En ligne',
-    logoUrl: 'https://i.postimg.cc/NGSs02yS/des.png',
+    logoUrl: 'emma-avatar.png',
     welcomeText: 'Bonjour ! Comment puis-je vous aider ?',
     inputPlaceholder: 'Ecrivez votre question...',
     buttonText: 'Poser une question',
