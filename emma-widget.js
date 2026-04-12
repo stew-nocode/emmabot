@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  const EMMA_WIDGET_VERSION = '0.3.8';
+  const EMMA_WIDGET_VERSION = '0.4.0';
 
   // ── Already loaded guard ──
   if (global.EmmaChat) return;
@@ -59,6 +59,10 @@
     onMessage: null,
     // onError: (info) => {} — info: { kind, version, status?, message?, name? }
     onError: null,
+    // satisfactionEnabled: active/désactive les boutons 👍/👎 après chaque réponse bot.
+    satisfactionEnabled: true,
+    // satisfactionWebhookPath: path relatif au domaine n8n (déduit de webhookUrl).
+    satisfactionWebhookPath: 'chatbot-satisfaction',
   };
 
   /** Échappement HTML (contenu texte / nœuds). */
@@ -116,6 +120,23 @@
     }
     if (staticVal != null && String(staticVal).trim()) return String(staticVal).trim();
     return '';
+  }
+
+  /**
+   * Dérive l'URL satisfaction depuis webhookUrl en remplaçant le path après /webhook/.
+   * Retourne '' si échec (désactive silencieusement la feature).
+   */
+  function buildSatisfactionUrl(webhookUrl, path) {
+    try {
+      var u = new URL(String(webhookUrl || ''));
+      var idx = u.pathname.indexOf('/webhook/');
+      if (idx === -1) return '';
+      u.pathname = u.pathname.slice(0, idx + '/webhook/'.length) + String(path || '');
+      u.search = '';
+      return u.toString();
+    } catch (_) {
+      return '';
+    }
   }
 
   function safeGetLocalStorage() {
@@ -389,6 +410,21 @@
         border-radius:50%; animation:emmaSpin 0.65s linear infinite;
       }
       @keyframes emmaSpin { to { transform:rotate(360deg); } }
+
+      .emma-feedback-row {
+        display:flex; gap:4px; padding-left:39px; margin-top:2px;
+      }
+      .emma-feedback-btn {
+        background:transparent; border:none; cursor:pointer;
+        padding:4px 6px; border-radius:6px;
+        opacity:0.45; transition:opacity 0.15s;
+        color:#6b7280; line-height:1; font-family:inherit;
+      }
+      .emma-feedback-btn:hover { opacity:0.75; }
+      .emma-feedback-btn.voted { opacity:1; pointer-events:none; }
+      .emma-feedback-btn.voted.positif { color:#22c55e; }
+      .emma-feedback-btn.voted.negatif { color:#ef4444; }
+      .emma-feedback-btn:disabled { opacity:0.25; cursor:default; }
     `;
 
     const style = document.createElement('style');
@@ -410,6 +446,10 @@
   function buildWidget(cfg) {
     let sessionId = resolveSessionId(cfg);
     let isSending = false;
+
+    const satisfactionUrl = cfg.satisfactionEnabled
+      ? buildSatisfactionUrl(cfg.webhookUrl, cfg.satisfactionWebhookPath || 'chatbot-satisfaction')
+      : '';
 
     function emitError(payload) {
       if (typeof cfg.onError !== 'function') return;
@@ -732,6 +772,10 @@
           }
           reply = reply || 'Aucune réponse reçue.';
           addBotMessage(reply);
+          if (reply !== 'Aucune réponse reçue.') {
+            const lastBotRow = elMessages.querySelector('.emma-bot-row:last-child');
+            if (lastBotRow) addFeedbackButtons(lastBotRow, text);
+          }
           if (typeof cfg.onMessage === 'function') cfg.onMessage({ role: 'bot', text: reply });
           return;
         }
@@ -852,6 +896,7 @@
           el.innerHTML = '';
           el.textContent = 'Aucune réponse reçue.';
         }
+        if (fullText) addFeedbackButtons(thinkingEl, text);
         if (typeof cfg.onMessage === 'function') cfg.onMessage({ role: 'bot', text: fullText });
       } catch (e) {
         if (pendingStreamRaf != null) {
@@ -989,6 +1034,72 @@
       const html = t.split(/\n\n+/).map(blockToHtml).join('');
       return '<div class="emma-msg-content">' + html + '</div>';
     }
+    const SVG_THUMBS_UP =
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/>' +
+      '<path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>';
+    const SVG_THUMBS_DOWN =
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3H10z"/>' +
+      '<path d="M17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/></svg>';
+
+    /**
+     * Ajoute les boutons 👍/👎 sous un message bot.
+     * @param {HTMLElement} botRow - le .emma-bot-row contenant le message
+     * @param {string} userQuestion - texte exact de la question posée par l'utilisateur
+     */
+    function addFeedbackButtons(botRow, userQuestion) {
+      if (!cfg.satisfactionEnabled || !satisfactionUrl) return;
+      if (!botRow || !botRow.isConnected) return;
+
+      const feedbackRow = document.createElement('div');
+      feedbackRow.className = 'emma-feedback-row';
+
+      const btnPos = document.createElement('button');
+      btnPos.className = 'emma-feedback-btn';
+      btnPos.setAttribute('aria-label', 'Réponse utile');
+      btnPos.innerHTML = SVG_THUMBS_UP;
+
+      const btnNeg = document.createElement('button');
+      btnNeg.className = 'emma-feedback-btn';
+      btnNeg.setAttribute('aria-label', 'Réponse non utile');
+      btnNeg.innerHTML = SVG_THUMBS_DOWN;
+
+      feedbackRow.appendChild(btnPos);
+      feedbackRow.appendChild(btnNeg);
+      botRow.appendChild(feedbackRow);
+
+      function sendVote(satisfaction) {
+        btnPos.disabled = true;
+        btnNeg.disabled = true;
+        const clicked = satisfaction === 'positif' ? btnPos : btnNeg;
+        clicked.classList.add('voted', satisfaction);
+
+        const extraHeaders =
+          cfg.webhookHeaders && typeof cfg.webhookHeaders === 'object' && !Array.isArray(cfg.webhookHeaders)
+            ? cfg.webhookHeaders : {};
+        const fromCfg = cfg.sharedSecret && String(cfg.sharedSecret).trim();
+        const fromHeader = extraHeaders['X-Emma-Secret'] || extraHeaders['x-emma-secret'];
+        const emmaSecret = fromCfg || (fromHeader && String(fromHeader).trim()) || null;
+
+        const body = Object.assign(
+          { sessionId: sessionId, question: userQuestion, satisfaction: satisfaction },
+          emmaSecret ? { emmaSecret: emmaSecret } : {}
+        );
+
+        try {
+          fetch(satisfactionUrl, {
+            method: 'POST',
+            headers: Object.assign({ 'Content-Type': 'application/json' }, extraHeaders),
+            body: JSON.stringify(body),
+          }).catch(function () {});
+        } catch (_) {}
+      }
+
+      btnPos.onclick = function () { sendVote('positif'); };
+      btnNeg.onclick = function () { sendVote('negatif'); };
+    }
+
     if (cfg.autoOpen) setTimeout(open, 300);
 
     // ── Public API ──
