@@ -310,7 +310,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "=UPDATE n8n_chat_histories SET user_id = '{{ $('When chat message received').item.json.userId ?? \"\" }}', erp_session_id = '{{ $('When chat message received').item.json.erpSessionId ?? \"\" }}', page_url = '{{ $('When chat message received').item.json.pageUrl ?? \"\" }}' WHERE session_id = '{{ $('When chat message received').item.json.sessionId }}' AND (user_id = '' OR user_id IS NULL)",
+        "query": "=UPDATE public.n8n_chat_histories SET user_id = '{{ $('When chat message received').item.json.userId ?? \"\" }}', erp_session_id = '{{ $('When chat message received').item.json.erpSessionId ?? \"\" }}', page_url = '{{ $('When chat message received').item.json.pageUrl ?? \"\" }}' WHERE session_id = '{{ $('When chat message received').item.json.sessionId }}' AND (user_id IS NULL OR TRIM(COALESCE(user_id, '')) = '')",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
@@ -321,6 +321,7 @@
       ],
       "id": "a1b2c3d4-audit-hist-0001-000000000001",
       "name": "Update Chat History Audit",
+      "continueOnFail": true,
       "credentials": {
         "postgres": {
           "id": "A2y4YjLT62NuyLCX",
