@@ -62,7 +62,7 @@ jobs:
       - name: Préparer le dossier publié (_site)
         run: |
           mkdir -p _site
-          cp index.html emma-widget.js EMBED_SNIPPET.html README.md local.config.example.js local.config.js _site/
+          cp index.html emma-widget.js emma-avatar.png EMBED_SNIPPET.html README.md local.config.example.js local.config.js _site/
           : > _site/.nojekyll
 
       - name: Configure Pages
