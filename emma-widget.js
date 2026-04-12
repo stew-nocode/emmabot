@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  const EMMA_WIDGET_VERSION = '0.4.2';
+  const EMMA_WIDGET_VERSION = '0.4.3';
 
   // ── Already loaded guard ──
   if (global.EmmaChat) return;
@@ -65,6 +65,9 @@
     satisfactionWebhookPath: 'chatbot-satisfaction',
     // Texte discret sous la réponse (vote satisfaction), personnalisable.
     feedbackPromptText: 'Cette réponse vous a-t-elle été utile ?',
+    // satisfactionOnlyAfterKb: si true, n’affiche 👍/👎 que si la réponse semble issue de la KB (heuristique)
+    // ou si n8n envoie kbConsulted / emmaKbConsulted / ragInvoked (bool) dans le JSON du chat.
+    satisfactionOnlyAfterKb: true,
   };
 
   /** Échappement HTML (contenu texte / nœuds). */
@@ -785,7 +788,8 @@
           addBotMessage(reply);
           if (reply !== 'Aucune réponse reçue.') {
             const lastBotRow = elMessages.querySelector('.emma-bot-row:last-child');
-            if (lastBotRow) addFeedbackButtons(lastBotRow, text);
+            const kbMeta = extractKbMetaFromPayload(data);
+            if (lastBotRow) addFeedbackButtons(lastBotRow, text, { kbConsulted: kbMeta, replyText: reply });
           }
           if (typeof cfg.onMessage === 'function') cfg.onMessage({ role: 'bot', text: reply });
           return;
@@ -794,8 +798,19 @@
         if (!res.body) {
           const raw = await res.text();
           thinkingEl.remove();
-          const reply = tryParseJsonReply(raw.trim()) || raw.trim() || 'Aucune réponse reçue.';
+          const rawTrim = raw.trim();
+          const reply = tryParseJsonReply(rawTrim) || rawTrim || 'Aucune réponse reçue.';
+          let kbMetaBody;
+          try {
+            kbMetaBody = extractKbMetaFromPayload(JSON.parse(rawTrim));
+          } catch (_) {
+            kbMetaBody = undefined;
+          }
           addBotMessage(reply);
+          if (reply !== 'Aucune réponse reçue.') {
+            const lastRow = elMessages.querySelector('.emma-bot-row:last-child');
+            if (lastRow) addFeedbackButtons(lastRow, text, { kbConsulted: kbMetaBody, replyText: reply });
+          }
           if (typeof cfg.onMessage === 'function') cfg.onMessage({ role: 'bot', text: reply });
           return;
         }
@@ -805,6 +820,8 @@
         let fullText = '';
         let rawBuf = '';
         let lineBuf = '';
+        /** Métadonnée optionnelle n8n (kbConsulted, etc.) lue sur les lignes NDJSON. */
+        let streamKbMeta;
         let streamBubble = null;
         /** Throttle rendu markdown pendant le stream (évite ** bruts tout en limitant le coût regex). */
         let lastStreamPaintMs = 0;
@@ -870,6 +887,9 @@
             if (!norm) continue;
             try {
               const parsed = JSON.parse(norm);
+              const kbM = extractKbMetaFromSingle(parsed);
+              if (kbM === true) streamKbMeta = true;
+              else if (kbM === false && streamKbMeta !== true) streamKbMeta = false;
               appendStreamDelta(extractStreamDelta(parsed));
             } catch (_) {}
           }
@@ -877,7 +897,11 @@
         const tail = normalizeStreamLine(lineBuf);
         if (tail) {
           try {
-            appendStreamDelta(extractStreamDelta(JSON.parse(tail)));
+            const parsedT = JSON.parse(tail);
+            const kbT = extractKbMetaFromSingle(parsedT);
+            if (kbT === true) streamKbMeta = true;
+            else if (kbT === false && streamKbMeta !== true) streamKbMeta = false;
+            appendStreamDelta(extractStreamDelta(parsedT));
           } catch (_) {}
         }
         flushStreamImmediately();
@@ -889,7 +913,11 @@
               const norm = normalizeStreamLine(l);
               if (!norm) return;
               try {
-                acc += extractStreamDelta(JSON.parse(norm));
+                const p = JSON.parse(norm);
+                const kbF = extractKbMetaFromSingle(p);
+                if (kbF === true) streamKbMeta = true;
+                else if (kbF === false && streamKbMeta !== true) streamKbMeta = false;
+                acc += extractStreamDelta(p);
               } catch (_) {}
             });
             fallback = acc;
@@ -907,7 +935,7 @@
           el.innerHTML = '';
           el.textContent = 'Aucune réponse reçue.';
         }
-        if (fullText) addFeedbackButtons(thinkingEl, text);
+        if (fullText) addFeedbackButtons(thinkingEl, text, { kbConsulted: streamKbMeta, replyText: fullText });
         if (typeof cfg.onMessage === 'function') cfg.onMessage({ role: 'bot', text: fullText });
       } catch (e) {
         if (pendingStreamRaf != null) {
@@ -1054,6 +1082,68 @@
       const html = t.split(/\n\n+/).map(blockToHtml).join('');
       return '<div class="emma-msg-content">' + html + '</div>';
     }
+
+    /** Lit un booléen explicite renvoyé par n8n (optionnel). */
+    function extractKbMetaFromSingle(obj) {
+      if (!obj || typeof obj !== 'object') return undefined;
+      if (obj.kbConsulted === true || obj.emmaKbConsulted === true || obj.ragInvoked === true || obj.ragUsed === true) {
+        return true;
+      }
+      if (obj.kbConsulted === false || obj.emmaKbConsulted === false || obj.ragInvoked === false || obj.ragUsed === false) {
+        return false;
+      }
+      const em = obj.emmaMeta || obj.meta;
+      if (em && typeof em === 'object') {
+        if (em.kbConsulted === true || em.ragUsed === true) return true;
+        if (em.kbConsulted === false) return false;
+      }
+      return undefined;
+    }
+
+    function extractKbMetaFromPayload(data) {
+      if (data == null) return undefined;
+      if (Array.isArray(data)) {
+        let anyTrue = false;
+        let anyFalse = false;
+        for (let i = 0; i < data.length; i++) {
+          const m = extractKbMetaFromSingle(data[i]);
+          if (m === true) anyTrue = true;
+          if (m === false) anyFalse = true;
+        }
+        if (anyTrue) return true;
+        if (anyFalse) return false;
+        return undefined;
+      }
+      return extractKbMetaFromSingle(data);
+    }
+
+    /** Heuristique : réponse structurée type fiche KB vs politesse courte. */
+    function guessKbWasUsed(replyText) {
+      const raw = stripTrailingN8nNoise(String(replyText || '')).trim();
+      if (!raw) return false;
+      const lower = raw.toLowerCase();
+      if (/unauthorized|service indisponible|réponse invalide/i.test(raw)) return false;
+      if (raw.includes('##') || /(^|[\n\r])\s*#{2,3}\s+\S/m.test(raw)) return true;
+      if (lower.includes('chemin d\'accès') || lower.includes('chemin d’accès')) return true;
+      if (/[\n\r]\s*\d{1,2}\.\s+\S/.test(raw) && raw.length > 200) return true;
+      if (/\*\*[^*]{2,50}\*\*/.test(raw) && raw.length > 200) return true;
+      if (raw.length > 960) return true;
+      if (raw.length < 130) return false;
+      if (raw.length < 500) {
+        const closing =
+          /n['']hésitez pas|reven(ir|ez)\s+(vers|me)|à votre disposition|bonne journ(ée|e)|d['']autres questions|besoin d['']assistance|passez une (bonne|agr)/i.test(lower);
+        if (closing && !raw.includes('##')) return false;
+      }
+      return raw.length >= 520;
+    }
+
+    function shouldOfferSatisfactionFeedback(kbExplicit, replyText) {
+      if (!cfg.satisfactionOnlyAfterKb) return true;
+      if (kbExplicit === true) return true;
+      if (kbExplicit === false) return false;
+      return guessKbWasUsed(replyText);
+    }
+
     const SVG_THUMBS_UP =
       '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
       '<path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/>' +
@@ -1067,10 +1157,15 @@
      * Ajoute les boutons 👍/👎 sous un message bot.
      * @param {HTMLElement} botRow - le .emma-bot-row contenant le message
      * @param {string} userQuestion - texte exact de la question posée par l'utilisateur
+     * @param {{ kbConsulted?: boolean, replyText?: string }} [opts] - kbConsulted si n8n l’envoie ; replyText pour l’heuristique KB
      */
-    function addFeedbackButtons(botRow, userQuestion) {
+    function addFeedbackButtons(botRow, userQuestion, opts) {
       if (!cfg.satisfactionEnabled || !satisfactionUrl) return;
       if (!botRow || !botRow.isConnected) return;
+
+      const replyForGuess = opts && opts.replyText != null ? String(opts.replyText) : '';
+      const kbExplicit = opts && Object.prototype.hasOwnProperty.call(opts, 'kbConsulted') ? opts.kbConsulted : undefined;
+      if (!shouldOfferSatisfactionFeedback(kbExplicit, replyForGuess)) return;
 
       const block = botRow.querySelector('.emma-bot-block');
       if (!block) return;
