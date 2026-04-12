@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  const EMMA_WIDGET_VERSION = '0.4.7';
+  const EMMA_WIDGET_VERSION = '0.4.8';
 
   // ── Already loaded guard ──
   if (global.EmmaChat) return;
@@ -613,9 +613,7 @@
       <div class="emma-header">
         <div class="emma-brand">
           <div class="emma-avatar-wrap">
-            <div class="emma-avatar">
-              <img id="emma-header-avatar-img" alt="${escapeAttrStr(cfg.agentName)}" decoding="async">
-            </div>
+            <div class="emma-avatar" id="emma-header-avatar-slot"></div>
             <div class="emma-online"></div>
           </div>
           <div>
@@ -667,9 +665,18 @@
     document.body.appendChild(launcher);
     document.body.appendChild(widget);
 
-    (function bindHeaderAvatar() {
-      var im = widget.querySelector('#emma-header-avatar-img');
-      if (!im) return;
+    (function mountHeaderAvatar() {
+      var slot = widget.querySelector('#emma-header-avatar-slot');
+      if (!slot) return;
+      slot.textContent = '';
+      var im = document.createElement('img');
+      im.className = 'emma-header-avatar-img';
+      im.alt = String(cfg.agentName != null ? cfg.agentName : '');
+      im.decoding = 'async';
+      im.loading = 'eager';
+      im.setAttribute('referrerpolicy', 'no-referrer');
+      im.width = 44;
+      im.height = 44;
       im.onerror = function () {
         if (cfg._logoUrlFallback && im.src !== cfg._logoUrlFallback) {
           im.src = cfg._logoUrlFallback;
@@ -677,7 +684,10 @@
         }
         im.style.display = 'none';
       };
-      im.src = cfg.logoUrl;
+      var url = String(cfg.logoUrl != null ? cfg.logoUrl : '').trim();
+      if (!url) url = String(resolveLogoUrl(DEFAULTS.logoUrl));
+      im.src = sanitizeImageUrl(url, DEFAULTS.logoUrl);
+      slot.appendChild(im);
     })();
 
     // ── Event listeners ──
@@ -1331,6 +1341,7 @@
      */
     init: function (options) {
       const cfg = Object.assign({}, DEFAULTS, options);
+      if (cfg.logoUrl == null || !String(cfg.logoUrl).trim()) cfg.logoUrl = DEFAULTS.logoUrl;
       cfg.primaryColor = sanitizePrimaryColor(cfg.primaryColor);
       cfg._logoUrlFallback = '';
       try {
