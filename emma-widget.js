@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  const EMMA_WIDGET_VERSION = '0.4.3';
+  const EMMA_WIDGET_VERSION = '0.4.4';
 
   // ── Already loaded guard ──
   if (global.EmmaChat) return;
@@ -64,7 +64,8 @@
     // satisfactionWebhookPath: path relatif au domaine n8n (déduit de webhookUrl).
     satisfactionWebhookPath: 'chatbot-satisfaction',
     // Texte discret sous la réponse (vote satisfaction), personnalisable.
-    feedbackPromptText: 'Cette réponse vous a-t-elle été utile ?',
+    feedbackPromptText:
+      'Cette réponse vous a-t-elle été utile ? Vos retours aident à améliorer les réponses du chatbot.',
     // satisfactionOnlyAfterKb: si true, n’affiche 👍/👎 que si la réponse semble issue de la KB (heuristique)
     // ou si n8n envoie kbConsulted / emmaKbConsulted / ragInvoked (bool) dans le JSON du chat.
     satisfactionOnlyAfterKb: true,
@@ -1178,7 +1179,7 @@
       prompt.textContent =
         cfg.feedbackPromptText != null && String(cfg.feedbackPromptText).trim()
           ? String(cfg.feedbackPromptText).trim()
-          : 'Cette réponse vous a-t-elle été utile ?';
+          : 'Cette réponse vous a-t-elle été utile ? Vos retours aident à améliorer les réponses du chatbot.';
 
       const feedbackRow = document.createElement('div');
       feedbackRow.className = 'emma-feedback-row';
