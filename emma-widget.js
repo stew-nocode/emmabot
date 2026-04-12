@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  const EMMA_WIDGET_VERSION = '0.4.0';
+  const EMMA_WIDGET_VERSION = '0.4.1';
 
   // ── Already loaded guard ──
   if (global.EmmaChat) return;
@@ -1008,8 +1008,17 @@
     function scrollBottom() {
       elMessages.scrollTop = elMessages.scrollHeight;
     }
+    /** Coupe les fuites n8n (aide If « Try either… ») parfois concaténées au stream chat. */
+    function stripTrailingN8nNoise(raw) {
+      const s = String(raw);
+      const lower = s.toLowerCase();
+      const needle = '<p>try either';
+      const idx = lower.lastIndexOf(needle);
+      if (idx === -1) return s;
+      return s.slice(0, idx).trimEnd();
+    }
     function formatMessage(text) {
-      let t = String(text)
+      let t = stripTrailingN8nNoise(String(text))
         .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
         .replace(/\r\n/g,'\n');
       // Séparateurs type --- / *** / ___ sur leur propre ligne → filet discret (style chat pro)
