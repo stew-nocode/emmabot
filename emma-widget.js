@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  const EMMA_WIDGET_VERSION = '0.4.9';
+  const EMMA_WIDGET_VERSION = '0.5.0';
 
   // ── Already loaded guard ──
   if (global.EmmaChat) return;
@@ -457,10 +457,6 @@
       }
       .emma-action-btn:hover { transform:scale(1.08); }
       .emma-btn-attach { background:#F5F5F7; color:#888; }
-      .emma-btn-attach.emma-btn-attach--disabled {
-        cursor:not-allowed; opacity:0.5; pointer-events:none;
-      }
-      .emma-btn-attach.emma-btn-attach--disabled:hover { transform:none; }
       .emma-btn-send {
         background:${pc}; color:#fff;
         box-shadow:0 2px 10px rgba(0,0,0,0.2);
@@ -651,8 +647,8 @@
         </div>
         <div class="emma-input-area">
           <input type="text" id="emma-input" placeholder="${escapeAttrStr(cfg.inputPlaceholder)}">
-          <label class="emma-action-btn emma-btn-attach emma-btn-attach--disabled" title="Pièce jointe indisponible" aria-disabled="true">
-            <input type="file" accept="image/*" style="display:none;" id="emma-file" disabled tabindex="-1" aria-hidden="true">
+          <label class="emma-action-btn emma-btn-attach" style="cursor:pointer;" title="Image">
+            <input type="file" accept="image/*" style="display:none;" id="emma-file">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
             </svg>
@@ -1112,8 +1108,6 @@
       return row;
     }
     function handleImage(e) {
-      const fin = widget.querySelector('#emma-file');
-      if (fin && fin.disabled) return;
       const file = e.target.files[0];
       if (!file) return;
       const chips = widget.querySelector('#emma-chips');
