@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  const EMMA_WIDGET_VERSION = '0.7.1';
+  const EMMA_WIDGET_VERSION = '0.7.2';
 
   // ── Already loaded guard ──
   if (global.EmmaChat) return;
@@ -333,8 +333,8 @@
       .emma-chat.active { display:flex; }
 
       .emma-messages {
-        flex:1; overflow-y:auto; padding:22px 14px 24px;
-        display:flex; flex-direction:column; gap:20px;
+        flex:1; overflow-y:auto; padding:16px 14px 18px;
+        display:flex; flex-direction:column; gap:12px;
         scroll-behavior:smooth; background:#EEF0F5;
       }
       .emma-messages::-webkit-scrollbar { width:4px; }
@@ -352,14 +352,14 @@
         display:block;
       }
       .emma-bot-block {
-        display:flex; flex-direction:column; gap:6px;
+        display:flex; flex-direction:column; gap:4px;
         flex:1; min-width:0; max-width:calc(100% - 40px);
       }
       .emma-bot-name-label { font-size:11px; color:#9098A3; padding-left:4px; letter-spacing:0.02em; }
       .emma-msg-bot {
         background:#fff; border-radius:20px 20px 20px 6px;
-        padding:16px 18px 17px; font-size:15px; color:#1f2937;
-        line-height:1.72; letter-spacing:0;
+        padding:12px 16px 13px; font-size:13.5px; color:#1f2937;
+        line-height:1.65; letter-spacing:0;
         max-width:100%; width:fit-content; box-sizing:border-box;
         box-shadow:0 1px 3px rgba(0,0,0,0.05), 0 4px 20px rgba(0,0,0,0.04);
         animation:emmaMsgIn .2s ease;
@@ -367,24 +367,24 @@
       }
       .emma-msg-content { display:block; }
       .emma-msg-content .emma-msg-p {
-        margin:0 0 0.85em; line-height:1.72;
+        margin:0 0 0.65em; line-height:1.65;
       }
       .emma-msg-content .emma-msg-p:last-child { margin-bottom:0; }
-      .emma-msg-content .emma-msg-p + .emma-msg-p { margin-top:0.35em; }
+      .emma-msg-content .emma-msg-p + .emma-msg-p { margin-top:0.25em; }
       .emma-msg-lead {
-        display:block; font-weight:600; font-size:16px; line-height:1.45;
-        color:#111827; margin:0 0 0.55em;
+        display:block; font-weight:600; font-size:14px; line-height:1.4;
+        color:#111827; margin:0 0 0.45em;
       }
       .emma-msg-sep {
-        border:none; height:1px; margin:1.05em 0;
+        border:none; height:1px; margin:0.7em 0;
         background:linear-gradient(90deg, transparent 0%, #dfe3ea 12%, #dfe3ea 88%, transparent 100%);
       }
       .emma-user-row { display:flex; flex-direction:column; align-items:flex-end; gap:4px; }
       .emma-user-label { font-size:11px; color:#9098A3; padding-right:2px; }
       .emma-msg-user {
         background:${pc}; border-radius:20px 20px 6px 20px;
-        padding:14px 18px; font-size:15px; color:#fff;
-        line-height:1.72; max-width:min(100%, 300px); box-sizing:border-box;
+        padding:10px 14px; font-size:13.5px; color:#fff;
+        line-height:1.65; max-width:min(100%, 300px); box-sizing:border-box;
         word-wrap:break-word;
         animation:emmaMsgIn .2s ease;
       }
