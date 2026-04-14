@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  const EMMA_WIDGET_VERSION = '0.6.0';
+  const EMMA_WIDGET_VERSION = '0.7.0';
 
   // ── Already loaded guard ──
   if (global.EmmaChat) return;
@@ -440,9 +440,37 @@
       .emma-chip:disabled:hover { box-shadow:0 1px 4px rgba(0,0,0,0.07); transform:none; }
 
       .emma-input-area {
-        padding:12px 14px 14px; border-top:1px solid #EDEEF2;
-        display:flex; align-items:center; gap:10px;
+        border-top:1px solid #EDEEF2;
+        display:flex; flex-direction:column;
         background:#fff; flex-shrink:0;
+      }
+      /* Zone thumbnails — visible uniquement quand images en attente */
+      .emma-img-previews {
+        display:none; flex-wrap:wrap; gap:8px;
+        padding:10px 14px 6px;
+      }
+      .emma-img-previews.has-images { display:flex; }
+      .emma-img-thumb {
+        position:relative; width:64px; height:64px;
+        border-radius:8px; overflow:hidden; flex-shrink:0;
+        box-shadow:0 1px 4px rgba(0,0,0,0.12);
+      }
+      .emma-img-thumb img {
+        width:100%; height:100%; object-fit:cover; display:block;
+      }
+      .emma-img-thumb-rm {
+        position:absolute; top:3px; right:3px;
+        width:18px; height:18px; border-radius:50%; border:none;
+        background:rgba(0,0,0,0.55); color:#fff;
+        font-size:11px; line-height:1; cursor:pointer;
+        display:flex; align-items:center; justify-content:center;
+        transition:background .12s;
+      }
+      .emma-img-thumb-rm:hover { background:rgba(0,0,0,0.78); }
+      /* Rangée texte + boutons */
+      .emma-input-row {
+        display:flex; align-items:center; gap:10px;
+        padding:10px 14px 12px;
       }
       .emma-input-area input {
         flex:1; border:none; outline:none;
@@ -515,8 +543,9 @@
   function buildWidget(cfg) {
     let sessionId = resolveSessionId(cfg);
     let isSending = false;
-    /** Image en attente d'envoi avec le prochain message texte (data URL base64 compressée). */
-    let pendingImageDataUrl = null;
+    /** Images en attente d'envoi : tableau de { dataUrl, thumbUrl } (max 3). */
+    let pendingImages = [];
+    const MAX_IMAGES = 3;
 
     const satisfactionUrl = cfg.satisfactionEnabled
       ? buildSatisfactionUrl(cfg.webhookUrl, cfg.satisfactionWebhookPath || 'chatbot-satisfaction')
@@ -648,18 +677,21 @@
           <div id="emma-chips-wrap"></div>
         </div>
         <div class="emma-input-area">
-          <input type="text" id="emma-input" placeholder="${escapeAttrStr(cfg.inputPlaceholder)}">
-          <label class="emma-action-btn emma-btn-attach" style="cursor:pointer;" title="Image">
-            <input type="file" accept="image/*" style="display:none;" id="emma-file">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-            </svg>
-          </label>
-          <button class="emma-action-btn emma-btn-send" id="emma-send">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2">
-              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-            </svg>
-          </button>
+          <div class="emma-img-previews" id="emma-img-previews"></div>
+          <div class="emma-input-row">
+            <input type="text" id="emma-input" placeholder="${escapeAttrStr(cfg.inputPlaceholder)}">
+            <label class="emma-action-btn emma-btn-attach" style="cursor:pointer;" title="Joindre une image (max 3)">
+              <input type="file" accept="image/*" style="display:none;" id="emma-file">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+              </svg>
+            </label>
+            <button class="emma-action-btn emma-btn-send" id="emma-send">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2">
+                <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     `;
@@ -808,10 +840,12 @@
         const trimmedUserId = cfg.userId != null && String(cfg.userId).trim();
         const erpSessionForPayload = resolveAuditContextString(cfg.erpSessionId, cfg.getErpSessionId);
         const pageUrlForPayload = resolveAuditContextString(cfg.pageUrl, cfg.getPageUrl);
-        // Capture image en attente : inclure dans le payload puis réinitialiser
-        const imagePayload = pendingImageDataUrl ? { imageDataUrl: pendingImageDataUrl } : {};
-        pendingImageDataUrl = null;
-        clearImageBadge();
+        // Images en attente : inclure dans le payload puis réinitialiser
+        const snapshotImages = pendingImages.slice();
+        clearPendingImages();
+        const imagePayload = snapshotImages.length > 0
+          ? { imageDataUrls: snapshotImages.map(function (i) { return i.dataUrl; }) }
+          : {};
 
         const res = await fetch(cfg.webhookUrl, {
           method: 'POST',
@@ -829,6 +863,22 @@
           }),
           signal: controller.signal,
         });
+        // Afficher les miniatures dans le fil de messages (côté utilisateur)
+        if (snapshotImages.length > 0) {
+          const imgRow = document.createElement('div');
+          imgRow.className = 'emma-user-row';
+          imgRow.style.cssText = 'flex-direction:column;align-items:flex-end;gap:4px;';
+          const thumbsWrap = document.createElement('div');
+          thumbsWrap.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;';
+          snapshotImages.forEach(function (img) {
+            const im = document.createElement('img');
+            im.src = img.thumbUrl;
+            im.style.cssText = 'width:72px;height:72px;object-fit:cover;border-radius:8px;';
+            thumbsWrap.appendChild(im);
+          });
+          imgRow.appendChild(thumbsWrap);
+          elMessages.insertBefore(imgRow, widget.querySelector('#emma-input').closest('.emma-input-area'));
+        }
 
         if (!res.ok) {
           thinkingEl.remove();
@@ -1121,7 +1171,6 @@
       const QUALITY = 0.72;
       const reader = new FileReader();
       reader.onload = function (ev) {
-        const origDataUrl = ev.target.result;
         const imgEl = new global.Image();
         imgEl.onload = function () {
           let w = imgEl.width, h = imgEl.height;
@@ -1131,78 +1180,119 @@
           }
           const canvas = global.document.createElement('canvas');
           canvas.width = w; canvas.height = h;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(imgEl, 0, 0, w, h);
-          const compressed = canvas.toDataURL('image/jpeg', QUALITY);
-          cb(null, compressed);
+          canvas.getContext('2d').drawImage(imgEl, 0, 0, w, h);
+          cb(null, canvas.toDataURL('image/jpeg', QUALITY));
         };
         imgEl.onerror = function () { cb(new Error('Image invalide'), null); };
-        imgEl.src = origDataUrl;
+        imgEl.src = ev.target.result;
       };
       reader.onerror = function () { cb(new Error('Lecture fichier échouée'), null); };
       reader.readAsDataURL(file);
     }
 
-    /** Affiche un badge sur le bouton pièce jointe pour indiquer qu'une image est en attente. */
-    function setImageBadge(active) {
-      const btn = widget.querySelector('.emma-btn-attach');
-      if (!btn) return;
-      btn.style.background = active ? '#dbeafe' : '';
-      btn.style.color = active ? '#1d4ed8' : '';
-      btn.title = active ? 'Capture prête — sera envoyée avec votre prochain message' : 'Image';
+    /** Re-rend la zone de thumbnails dans la barre de saisie. */
+    function renderImagePreviews() {
+      const zone = widget.querySelector('#emma-img-previews');
+      if (!zone) return;
+      zone.innerHTML = '';
+      if (pendingImages.length === 0) {
+        zone.classList.remove('has-images');
+        // Rétablir placeholder par défaut
+        const inp = widget.querySelector('#emma-input');
+        if (inp) inp.placeholder = escapeAttrStr(cfg.inputPlaceholder);
+        return;
+      }
+      zone.classList.add('has-images');
+      // Placeholder contextuel
+      const inp = widget.querySelector('#emma-input');
+      if (inp) inp.placeholder = pendingImages.length === 1
+        ? 'Décrivez votre problème ou posez votre question sur cette capture…'
+        : 'Décrivez votre problème ou posez votre question sur ces captures…';
+
+      pendingImages.forEach(function (img, idx) {
+        const thumb = document.createElement('div');
+        thumb.className = 'emma-img-thumb';
+        const im = document.createElement('img');
+        im.src = img.thumbUrl;
+        im.alt = 'Capture ' + (idx + 1);
+        const rm = document.createElement('button');
+        rm.className = 'emma-img-thumb-rm';
+        rm.setAttribute('aria-label', 'Retirer cette image');
+        rm.innerHTML = '&#x2715;';
+        rm.onclick = function () {
+          try { URL.revokeObjectURL(img.thumbUrl); } catch (_) {}
+          pendingImages.splice(idx, 1);
+          renderImagePreviews();
+        };
+        thumb.appendChild(im);
+        thumb.appendChild(rm);
+        zone.appendChild(thumb);
+      });
+
+      // Icône "+" si < MAX_IMAGES — invite à ajouter d'autres captures
+      if (pendingImages.length < MAX_IMAGES) {
+        const add = document.createElement('label');
+        add.style.cssText = 'width:64px;height:64px;border-radius:8px;border:2px dashed #D1D5DB;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#9CA3AF;font-size:22px;flex-shrink:0;';
+        add.title = 'Ajouter une image (' + pendingImages.length + '/' + MAX_IMAGES + ')';
+        add.innerHTML = '+';
+        add.htmlFor = 'emma-file';
+        zone.appendChild(add);
+      }
     }
-    function clearImageBadge() { setImageBadge(false); }
+
+    function clearPendingImages() {
+      pendingImages.forEach(function (img) {
+        try { URL.revokeObjectURL(img.thumbUrl); } catch (_) {}
+      });
+      pendingImages = [];
+      renderImagePreviews();
+    }
 
     function handleImage(e) {
       const file = e.target.files[0];
       e.target.value = '';
       if (!file) return;
 
-      // Validation MIME
       if (!file.type.startsWith('image/')) {
         addBotMessage('Format non supporté. Veuillez joindre une image (JPG, PNG, WebP, GIF).');
         return;
       }
+      if (pendingImages.length >= MAX_IMAGES) {
+        addBotMessage('Maximum ' + MAX_IMAGES + ' images par message.');
+        return;
+      }
 
-      // Affichage local de la miniature (aperçu)
-      const chips = widget.querySelector('#emma-chips');
-      if (chips) chips.style.display = 'none';
-      const row = document.createElement('div');
-      row.className = 'emma-user-row';
-      const label = document.createElement('div');
-      label.className = 'emma-user-label';
-      label.textContent = 'Vous';
-      const img = document.createElement('img');
-      img.style.cssText = 'max-width:200px;border-radius:12px;display:block;margin-top:4px;';
-      const objUrl = URL.createObjectURL(file);
-      img.src = objUrl;
-      img.onload = function () {
-        global.setTimeout(function () { try { URL.revokeObjectURL(objUrl); } catch (_) {} }, 3000);
-      };
-      img.onerror = function () { try { URL.revokeObjectURL(objUrl); } catch (_) {} };
-      const note = document.createElement('div');
-      note.style.cssText = 'font-size:11px;color:#6b7280;margin-top:3px;';
-      note.textContent = 'Capture prête — tapez votre question et envoyez.';
-      row.appendChild(label);
-      row.appendChild(img);
-      row.appendChild(note);
-      elMessages.appendChild(row);
-      scrollBottom();
-
-      // Compression + mise en attente
       compressImageFile(file, function (err, dataUrl) {
         if (err || !dataUrl) {
           addBotMessage('Impossible de traiter cette image. Veuillez réessayer.');
           return;
         }
-        // Guard taille finale : base64 > 3 Mo
         if (dataUrl.length > 3 * 1024 * 1024) {
-          addBotMessage('La capture est trop volumineuse. Veuillez réduire la résolution ou utiliser un format compressé.');
+          addBotMessage('Cette capture est trop volumineuse. Réduisez la résolution ou utilisez un format compressé.');
           return;
         }
-        pendingImageDataUrl = dataUrl;
-        setImageBadge(true);
+        // thumbUrl = object URL sur la data URL pour l'aperçu léger
+        const blob = dataURItoBlob(dataUrl);
+        const thumbUrl = blob ? URL.createObjectURL(blob) : dataUrl;
+        pendingImages.push({ dataUrl: dataUrl, thumbUrl: thumbUrl });
+        renderImagePreviews();
+        // Focus sur le champ texte pour inviter à poser la question
+        const inp = widget.querySelector('#emma-input');
+        if (inp) inp.focus();
       });
+    }
+
+    /** Convertit une data URL en Blob (pour createObjectURL). */
+    function dataURItoBlob(dataUrl) {
+      try {
+        const arr = dataUrl.split(',');
+        const mime = arr[0].match(/:(.*?);/)[1];
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) u8arr[n] = bstr.charCodeAt(n);
+        return new Blob([u8arr], { type: mime });
+      } catch (_) { return null; }
     }
     function scrollBottom() {
       elMessages.scrollTop = elMessages.scrollHeight;
