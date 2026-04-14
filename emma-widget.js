@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  const EMMA_WIDGET_VERSION = '0.7.2';
+  const EMMA_WIDGET_VERSION = '0.7.3';
 
   // ── Already loaded guard ──
   if (global.EmmaChat) return;
@@ -387,6 +387,14 @@
         line-height:1.65; max-width:min(100%, 300px); box-sizing:border-box;
         word-wrap:break-word;
         animation:emmaMsgIn .2s ease;
+      }
+      .emma-msg-user-imgs {
+        display:flex; gap:4px; flex-wrap:wrap; margin-bottom:7px;
+      }
+      .emma-msg-user-img {
+        width:46px; height:46px; border-radius:6px;
+        object-fit:cover; display:block;
+        opacity:0.9; flex-shrink:0;
       }
       @keyframes emmaMsgIn {
         from { opacity:0; transform:translateY(6px); }
@@ -815,7 +823,11 @@
       const chips = widget.querySelector('#emma-chips');
       if (chips) chips.style.display = 'none';
       setSendingUI(true);
-      addUserMessage(text);
+      // Snapshot images avant tout (dataUrls stables, pas d'Object URL)
+      const snapshotDataUrls = pendingImages.map(function (i) { return i.dataUrl; });
+      clearPendingImages();
+
+      addUserMessage(text, snapshotDataUrls);
       if (typeof cfg.onMessage === 'function') cfg.onMessage({ role: 'user', text });
       const thinkingEl = addThinking();
       /** Déclaré hors du try pour pouvoir annuler le rAF dans le catch (stream). */
@@ -840,27 +852,7 @@
         const trimmedUserId = cfg.userId != null && String(cfg.userId).trim();
         const erpSessionForPayload = resolveAuditContextString(cfg.erpSessionId, cfg.getErpSessionId);
         const pageUrlForPayload = resolveAuditContextString(cfg.pageUrl, cfg.getPageUrl);
-        // Images en attente : snapshot avant réinitialisation
-        const snapshotImages = pendingImages.slice();
-        const imageDataUrls = snapshotImages.map(function (i) { return i.dataUrl; });
-        const imageThumbUrls = snapshotImages.map(function (i) { return i.thumbUrl; });
-
-        // Afficher les vignettes dans le fil AVANT le fetch (optimiste, Object URLs encore valides)
-        if (snapshotImages.length > 0) {
-          const thumbsWrap = document.createElement('div');
-          thumbsWrap.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;margin-bottom:4px;';
-          imageThumbUrls.forEach(function (thumbUrl) {
-            const im = document.createElement('img');
-            im.src = thumbUrl;
-            im.style.cssText = 'width:72px;height:72px;object-fit:cover;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,0.12);';
-            thumbsWrap.appendChild(im);
-          });
-          elMessages.appendChild(thumbsWrap);
-          scrollBottom();
-        }
-
-        // Réinitialiser la zone images (révoque les Object URLs)
-        clearPendingImages();
+        const imageDataUrls = snapshotDataUrls;
 
         const imagePayload = imageDataUrls.length > 0 ? { imageDataUrls: imageDataUrls } : {};
 
@@ -1111,10 +1103,31 @@
         setSendingUI(false);
       }
     }
-    function addUserMessage(text) {
+    function addUserMessage(text, imageDataUrls) {
       const row = document.createElement('div');
       row.className = 'emma-user-row';
-      row.innerHTML = `<div class="emma-user-label">Vous</div><div class="emma-msg-user">${escapeHtmlStr(text)}</div>`;
+      const label = document.createElement('div');
+      label.className = 'emma-user-label';
+      label.textContent = 'Vous';
+      const bubble = document.createElement('div');
+      bubble.className = 'emma-msg-user';
+      if (imageDataUrls && imageDataUrls.length > 0) {
+        const imgsRow = document.createElement('div');
+        imgsRow.className = 'emma-msg-user-imgs';
+        imageDataUrls.forEach(function(src) {
+          const im = document.createElement('img');
+          im.src = src;
+          im.className = 'emma-msg-user-img';
+          imgsRow.appendChild(im);
+        });
+        bubble.appendChild(imgsRow);
+      }
+      if (text) {
+        const textNode = document.createTextNode(text);
+        bubble.appendChild(textNode);
+      }
+      row.appendChild(label);
+      row.appendChild(bubble);
       elMessages.appendChild(row);
       scrollBottom();
     }
