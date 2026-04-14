@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  const EMMA_WIDGET_VERSION = '0.7.3';
+  const EMMA_WIDGET_VERSION = '0.7.4';
 
   // ── Already loaded guard ──
   if (global.EmmaChat) return;
@@ -358,8 +358,8 @@
       .emma-bot-name-label { font-size:11px; color:#9098A3; padding-left:4px; letter-spacing:0.02em; }
       .emma-msg-bot {
         background:#fff; border-radius:20px 20px 20px 6px;
-        padding:12px 16px 13px; font-size:13.5px; color:#1f2937;
-        line-height:1.65; letter-spacing:0;
+        padding:11px 15px 12px; font-size:12.5px; color:#1f2937;
+        line-height:1.6; letter-spacing:0;
         max-width:100%; width:fit-content; box-sizing:border-box;
         box-shadow:0 1px 3px rgba(0,0,0,0.05), 0 4px 20px rgba(0,0,0,0.04);
         animation:emmaMsgIn .2s ease;
@@ -367,13 +367,13 @@
       }
       .emma-msg-content { display:block; }
       .emma-msg-content .emma-msg-p {
-        margin:0 0 0.65em; line-height:1.65;
+        margin:0 0 0.55em; line-height:1.6;
       }
       .emma-msg-content .emma-msg-p:last-child { margin-bottom:0; }
       .emma-msg-content .emma-msg-p + .emma-msg-p { margin-top:0.25em; }
       .emma-msg-lead {
-        display:block; font-weight:600; font-size:14px; line-height:1.4;
-        color:#111827; margin:0 0 0.45em;
+        display:block; font-weight:600; font-size:13px; line-height:1.4;
+        color:#111827; margin:0 0 0.4em;
       }
       .emma-msg-sep {
         border:none; height:1px; margin:0.7em 0;
@@ -383,18 +383,18 @@
       .emma-user-label { font-size:11px; color:#9098A3; padding-right:2px; }
       .emma-msg-user {
         background:${pc}; border-radius:20px 20px 6px 20px;
-        padding:10px 14px; font-size:13.5px; color:#fff;
-        line-height:1.65; max-width:min(100%, 300px); box-sizing:border-box;
+        padding:10px 14px; font-size:12.5px; color:#fff;
+        line-height:1.6; max-width:min(100%, 300px); box-sizing:border-box;
         word-wrap:break-word;
         animation:emmaMsgIn .2s ease;
       }
       .emma-msg-user-imgs {
-        display:flex; gap:4px; flex-wrap:wrap; margin-bottom:7px;
+        display:flex; gap:3px; flex-wrap:wrap; margin-bottom:6px;
       }
       .emma-msg-user-img {
-        width:46px; height:46px; border-radius:6px;
+        width:36px; height:36px; border-radius:5px;
         object-fit:cover; display:block;
-        opacity:0.9; flex-shrink:0;
+        opacity:0.88; flex-shrink:0;
       }
       @keyframes emmaMsgIn {
         from { opacity:0; transform:translateY(6px); }
