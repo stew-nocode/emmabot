@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  const EMMA_WIDGET_VERSION = '0.7.4';
+  const EMMA_WIDGET_VERSION = '0.7.5';
 
   // ── Already loaded guard ──
   if (global.EmmaChat) return;
@@ -689,7 +689,7 @@
           <div class="emma-input-row">
             <input type="text" id="emma-input" placeholder="${escapeAttrStr(cfg.inputPlaceholder)}">
             <label class="emma-action-btn emma-btn-attach" style="cursor:pointer;" title="Joindre une image (max 3)">
-              <input type="file" accept="image/*" style="display:none;" id="emma-file">
+              <input type="file" accept="image/*" multiple style="display:none;" id="emma-file">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
               </svg>
@@ -756,7 +756,9 @@
     widget.querySelector('#emma-close').addEventListener('click', () => close());
     widget.querySelector('#emma-start').addEventListener('click', () => startChat());
     widget.querySelector('#emma-send').addEventListener('click', () => sendMessage());
-    widget.querySelector('#emma-input').addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(); });
+    const emmaInput = widget.querySelector('#emma-input');
+    emmaInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(); });
+    emmaInput.addEventListener('paste', handlePaste);
     widget.querySelector('#emma-file').addEventListener('change', handleImage);
 
     const elMessages = widget.querySelector('#emma-messages');
@@ -1262,12 +1264,9 @@
       renderImagePreviews();
     }
 
-    function handleImage(e) {
-      const file = e.target.files[0];
-      e.target.value = '';
-      if (!file) return;
-
-      if (!file.type.startsWith('image/')) {
+    /** Traite un seul File image : compression → ajout à pendingImages. */
+    function processImageFile(file) {
+      if (!file || !file.type.startsWith('image/')) {
         addBotMessage('Format non supporté. Veuillez joindre une image (JPG, PNG, WebP, GIF).');
         return;
       }
@@ -1275,7 +1274,6 @@
         addBotMessage('Maximum ' + MAX_IMAGES + ' images par message.');
         return;
       }
-
       compressImageFile(file, function (err, dataUrl) {
         if (err || !dataUrl) {
           addBotMessage('Impossible de traiter cette image. Veuillez réessayer.');
@@ -1285,14 +1283,37 @@
           addBotMessage('Cette capture est trop volumineuse. Réduisez la résolution ou utilisez un format compressé.');
           return;
         }
-        // thumbUrl = object URL sur la data URL pour l'aperçu léger
         const blob = dataURItoBlob(dataUrl);
         const thumbUrl = blob ? URL.createObjectURL(blob) : dataUrl;
         pendingImages.push({ dataUrl: dataUrl, thumbUrl: thumbUrl });
         renderImagePreviews();
-        // Focus sur le champ texte pour inviter à poser la question
         const inp = widget.querySelector('#emma-input');
         if (inp) inp.focus();
+      });
+    }
+
+    /** Gère la sélection via l'input file (multi-fichiers). */
+    function handleImage(e) {
+      const files = Array.from(e.target.files || []);
+      e.target.value = '';
+      const remaining = MAX_IMAGES - pendingImages.length;
+      files.slice(0, remaining).forEach(processImageFile);
+      if (files.length > remaining && remaining > 0) {
+        addBotMessage('Seules les ' + remaining + ' premières images ont été ajoutées (maximum ' + MAX_IMAGES + ').');
+      }
+    }
+
+    /** Gère le collage d'image via Ctrl+V. */
+    function handlePaste(e) {
+      const items = e.clipboardData && e.clipboardData.items;
+      if (!items) return;
+      const imageItems = Array.from(items).filter(function (it) { return it.type.startsWith('image/'); });
+      if (imageItems.length === 0) return;
+      e.preventDefault();
+      const remaining = MAX_IMAGES - pendingImages.length;
+      imageItems.slice(0, remaining).forEach(function (it) {
+        const file = it.getAsFile();
+        if (file) processImageFile(file);
       });
     }
 
