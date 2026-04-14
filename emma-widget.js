@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  const EMMA_WIDGET_VERSION = '0.4.8';
+  const EMMA_WIDGET_VERSION = '0.6.0';
 
   // ── Already loaded guard ──
   if (global.EmmaChat) return;
@@ -515,6 +515,8 @@
   function buildWidget(cfg) {
     let sessionId = resolveSessionId(cfg);
     let isSending = false;
+    /** Image en attente d'envoi avec le prochain message texte (data URL base64 compressée). */
+    let pendingImageDataUrl = null;
 
     const satisfactionUrl = cfg.satisfactionEnabled
       ? buildSatisfactionUrl(cfg.webhookUrl, cfg.satisfactionWebhookPath || 'chatbot-satisfaction')
@@ -806,6 +808,11 @@
         const trimmedUserId = cfg.userId != null && String(cfg.userId).trim();
         const erpSessionForPayload = resolveAuditContextString(cfg.erpSessionId, cfg.getErpSessionId);
         const pageUrlForPayload = resolveAuditContextString(cfg.pageUrl, cfg.getPageUrl);
+        // Capture image en attente : inclure dans le payload puis réinitialiser
+        const imagePayload = pendingImageDataUrl ? { imageDataUrl: pendingImageDataUrl } : {};
+        pendingImageDataUrl = null;
+        clearImageBadge();
+
         const res = await fetch(cfg.webhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...extraHeaders },
@@ -818,6 +825,7 @@
             ...(trimmedUserId ? { userId: trimmedUserId } : {}),
             ...(erpSessionForPayload ? { erpSessionId: erpSessionForPayload } : {}),
             ...(pageUrlForPayload ? { pageUrl: pageUrlForPayload } : {}),
+            ...imagePayload,
           }),
           signal: controller.signal,
         });
@@ -1107,9 +1115,56 @@
       scrollBottom();
       return row;
     }
+    /** Compresse une image via canvas (max 800×800, JPEG 0.72) et retourne une data URL. */
+    function compressImageFile(file, cb) {
+      const MAX_DIM = 800;
+      const QUALITY = 0.72;
+      const reader = new FileReader();
+      reader.onload = function (ev) {
+        const origDataUrl = ev.target.result;
+        const imgEl = new global.Image();
+        imgEl.onload = function () {
+          let w = imgEl.width, h = imgEl.height;
+          if (w > MAX_DIM || h > MAX_DIM) {
+            if (w >= h) { h = Math.round(h * MAX_DIM / w); w = MAX_DIM; }
+            else { w = Math.round(w * MAX_DIM / h); h = MAX_DIM; }
+          }
+          const canvas = global.document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(imgEl, 0, 0, w, h);
+          const compressed = canvas.toDataURL('image/jpeg', QUALITY);
+          cb(null, compressed);
+        };
+        imgEl.onerror = function () { cb(new Error('Image invalide'), null); };
+        imgEl.src = origDataUrl;
+      };
+      reader.onerror = function () { cb(new Error('Lecture fichier échouée'), null); };
+      reader.readAsDataURL(file);
+    }
+
+    /** Affiche un badge sur le bouton pièce jointe pour indiquer qu'une image est en attente. */
+    function setImageBadge(active) {
+      const btn = widget.querySelector('.emma-btn-attach');
+      if (!btn) return;
+      btn.style.background = active ? '#dbeafe' : '';
+      btn.style.color = active ? '#1d4ed8' : '';
+      btn.title = active ? 'Capture prête — sera envoyée avec votre prochain message' : 'Image';
+    }
+    function clearImageBadge() { setImageBadge(false); }
+
     function handleImage(e) {
       const file = e.target.files[0];
+      e.target.value = '';
       if (!file) return;
+
+      // Validation MIME
+      if (!file.type.startsWith('image/')) {
+        addBotMessage('Format non supporté. Veuillez joindre une image (JPG, PNG, WebP, GIF).');
+        return;
+      }
+
+      // Affichage local de la miniature (aperçu)
       const chips = widget.querySelector('#emma-chips');
       if (chips) chips.style.display = 'none';
       const row = document.createElement('div');
@@ -1118,26 +1173,36 @@
       label.className = 'emma-user-label';
       label.textContent = 'Vous';
       const img = document.createElement('img');
-      img.style.cssText = 'max-width:200px;border-radius:12px;display:block;';
+      img.style.cssText = 'max-width:200px;border-radius:12px;display:block;margin-top:4px;';
       const objUrl = URL.createObjectURL(file);
       img.src = objUrl;
-      img.onload = () => {
-        global.setTimeout(() => {
-          try {
-            URL.revokeObjectURL(objUrl);
-          } catch (_) {}
-        }, 3000);
+      img.onload = function () {
+        global.setTimeout(function () { try { URL.revokeObjectURL(objUrl); } catch (_) {} }, 3000);
       };
-      img.onerror = () => {
-        try {
-          URL.revokeObjectURL(objUrl);
-        } catch (_) {}
-      };
+      img.onerror = function () { try { URL.revokeObjectURL(objUrl); } catch (_) {} };
+      const note = document.createElement('div');
+      note.style.cssText = 'font-size:11px;color:#6b7280;margin-top:3px;';
+      note.textContent = 'Capture prête — tapez votre question et envoyez.';
       row.appendChild(label);
       row.appendChild(img);
+      row.appendChild(note);
       elMessages.appendChild(row);
       scrollBottom();
-      e.target.value = '';
+
+      // Compression + mise en attente
+      compressImageFile(file, function (err, dataUrl) {
+        if (err || !dataUrl) {
+          addBotMessage('Impossible de traiter cette image. Veuillez réessayer.');
+          return;
+        }
+        // Guard taille finale : base64 > 3 Mo
+        if (dataUrl.length > 3 * 1024 * 1024) {
+          addBotMessage('La capture est trop volumineuse. Veuillez réduire la résolution ou utiliser un format compressé.');
+          return;
+        }
+        pendingImageDataUrl = dataUrl;
+        setImageBadge(true);
+      });
     }
     function scrollBottom() {
       elMessages.scrollTop = elMessages.scrollHeight;
