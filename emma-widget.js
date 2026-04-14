@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  const EMMA_WIDGET_VERSION = '0.7.0';
+  const EMMA_WIDGET_VERSION = '0.7.1';
 
   // ── Already loaded guard ──
   if (global.EmmaChat) return;
@@ -840,12 +840,29 @@
         const trimmedUserId = cfg.userId != null && String(cfg.userId).trim();
         const erpSessionForPayload = resolveAuditContextString(cfg.erpSessionId, cfg.getErpSessionId);
         const pageUrlForPayload = resolveAuditContextString(cfg.pageUrl, cfg.getPageUrl);
-        // Images en attente : inclure dans le payload puis réinitialiser
+        // Images en attente : snapshot avant réinitialisation
         const snapshotImages = pendingImages.slice();
+        const imageDataUrls = snapshotImages.map(function (i) { return i.dataUrl; });
+        const imageThumbUrls = snapshotImages.map(function (i) { return i.thumbUrl; });
+
+        // Afficher les vignettes dans le fil AVANT le fetch (optimiste, Object URLs encore valides)
+        if (snapshotImages.length > 0) {
+          const thumbsWrap = document.createElement('div');
+          thumbsWrap.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;margin-bottom:4px;';
+          imageThumbUrls.forEach(function (thumbUrl) {
+            const im = document.createElement('img');
+            im.src = thumbUrl;
+            im.style.cssText = 'width:72px;height:72px;object-fit:cover;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,0.12);';
+            thumbsWrap.appendChild(im);
+          });
+          elMessages.appendChild(thumbsWrap);
+          scrollBottom();
+        }
+
+        // Réinitialiser la zone images (révoque les Object URLs)
         clearPendingImages();
-        const imagePayload = snapshotImages.length > 0
-          ? { imageDataUrls: snapshotImages.map(function (i) { return i.dataUrl; }) }
-          : {};
+
+        const imagePayload = imageDataUrls.length > 0 ? { imageDataUrls: imageDataUrls } : {};
 
         const res = await fetch(cfg.webhookUrl, {
           method: 'POST',
@@ -863,22 +880,6 @@
           }),
           signal: controller.signal,
         });
-        // Afficher les miniatures dans le fil de messages (côté utilisateur)
-        if (snapshotImages.length > 0) {
-          const imgRow = document.createElement('div');
-          imgRow.className = 'emma-user-row';
-          imgRow.style.cssText = 'flex-direction:column;align-items:flex-end;gap:4px;';
-          const thumbsWrap = document.createElement('div');
-          thumbsWrap.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;';
-          snapshotImages.forEach(function (img) {
-            const im = document.createElement('img');
-            im.src = img.thumbUrl;
-            im.style.cssText = 'width:72px;height:72px;object-fit:cover;border-radius:8px;';
-            thumbsWrap.appendChild(im);
-          });
-          imgRow.appendChild(thumbsWrap);
-          elMessages.insertBefore(imgRow, widget.querySelector('#emma-input').closest('.emma-input-area'));
-        }
 
         if (!res.ok) {
           thinkingEl.remove();
