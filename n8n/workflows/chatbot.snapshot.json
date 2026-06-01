@@ -3,7 +3,7 @@
     "workflowId": "PNc_3uhUfWJosTQi4qWtW",
     "workflowName": "chatbot",
     "active": true,
-    "exportedAt": "2026-06-01T18:49:32.926Z",
+    "exportedAt": "2026-06-01T21:34:31.545Z",
     "warning": "Snapshot sanitizé pour Git. Réattacher les credentials dans n8n avant réimport."
   },
   "name": "chatbot",
@@ -536,7 +536,7 @@
           "mappingMode": "defineBelow",
           "value": {
             "traite": false,
-            "sans_reponse_kb": "={{ $('AI Agent').item.json.output.includes(\"n�cessite l'avis d'un de nos experts\") || $('AI Agent').item.json.output.includes(\"transmis imm�diatement votre demande\") || $('AI Agent').item.json.output.includes(\"ne concerne pas\") }}",
+            "sans_reponse_kb": "={{ ['necessite l avis','transmis immediatement','transmise en priorite','ne concerne pas','je n ai pas cette information','je transmets'].some(p => $('AI Agent').item.json.output.normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').includes(p)) }}",
             "question": "={{ $('When chat message received').item.json.chatInput }}",
             "reponse": "={{ $('AI Agent').item.json.output }}",
             "session_id": "={{ $('When chat message received').item.json.sessionId }}",
