@@ -2,8 +2,9 @@
   "meta": {
     "workflowId": "PNc_3uhUfWJosTQi4qWtW",
     "workflowName": "chatbot",
-    "exportedAt": "2026-04-08T19:33:26.712Z",
-    "warning": "Fichier sanitizé pour Git : remplacer REDACTED_Emma_SECRET dans le nœud Code auth avant toute réimportation brute ; réattacher les credentials dans n8n si besoin."
+    "active": true,
+    "exportedAt": "2026-06-01T18:49:32.926Z",
+    "warning": "Snapshot sanitizé pour Git. Réattacher les credentials dans n8n avant réimport."
   },
   "name": "chatbot",
   "nodes": [
@@ -32,38 +33,18 @@
         "promptType": "define",
         "text": "={{ $json.chatInput }}",
         "options": {
-          "systemMessage": "=# Rôle\nTu es l'assistant support pour l'ERP **OBC**. Tu réponds en t'appuyant sur la base de connaissance (outil de recherche vectorielle) pour tout ce qui concerne des fonctionnalités, écrans ou procédures.\n\n# Règle de recherche\n- Avant toute réponse **factuelle** sur OBC : utiliser l'outil de recherche vectorielle.\n- Baser la réponse sur les extraits retournés ; n'invente pas de menus ni d'étapes.\n- Si l'outil ne retourne rien d'utile : répondre exactement ce texte (sans guillemets autour) :\nJe n'ai pas cette information dans ma base de connaissance.\nJe transmets immédiatement votre préoccupation au support qui vous reprendra rapidement. Avez-vous d'autres questions ?\n\n# Quand ne pas appeler l'outil\n- Simple salutation ou remerciement.\n- Question générale sur ton rôle (« que sais-tu faire ? ») sans détail métier.\n- Relance conversationnelle d'une réponse déjà donnée dans l'historique récent (sans nouveau sujet OBC).\nEn cas de doute sur le besoin métier : **appeler l'outil**.\n\n# Langue et ton\n- Langue de l'utilisateur (français par défaut).\n- Professionnel, pédagogique ; une seule question de clarification à la fois si nécessaire.\n\n# Structure des réponses\n- Titres ## pour les sections ; listes pour les étapes.\n- **Gras** pour champs, boutons, menus.\n- Séparateur --- entre grandes sections.\n- Indiquer le **chemin d'accès** dans l'ERP quand il est dans la base.\n\n# Périmètre\nModules : RH, Opérations, Finance, Projet, Paiement, CRM.\n- « Global » / Administration système = paramétrage global, pas un module métier.\n- Hors OBC : « Cette question ne concerne pas l'ERP OBC. Je suis uniquement en mesure de vous assister sur les fonctionnalités de cet ERP. »\n\n# Question vague\n« Pouvez-vous préciser sur quel module ou quelle fonctionnalité porte votre question ? »\n\n# Erreur utilisateur dans l'ERP\nFournir la procédure correcte issue de la base et préciser où l'erreur survient si l'information est disponible.\n\n# Notes\n- « Global », « Administration Système » : paramétrage global de l'ERP, pas des sous-modules OBC.\n- Achat & vente n'est pas un module. N'invente rien."
+          "systemMessage": "=# R�le\nTu es l'assistant support pour **OBC**. Tu r�ponds en t'appuyant sur la base de connaissance (outil de recherche vectorielle) pour tout ce qui concerne des fonctionnalit�s, �crans ou proc�dures.\n\n# Message d'accueil\nLorsque l'utilisateur envoie un premier message de salutation (bonjour, salut, hello, bonsoir, hi) ou demande qui tu es, r�pondre exactement ce texte (sans guillemets autour) :\nBonjour, je suis Emma, votre assistante OBC.\nJe suis l� pour vous guider dans l'utilisation des fonctionnalit�s.\nComment puis-je vous aider aujourd'hui ?\n\n# R�gle de recherche\n- Avant toute r�ponse **factuelle** sur OBC : utiliser l'outil de recherche vectorielle.\n- Baser la r�ponse sur les extraits retourn�s ; n'invente pas de menus ni d'�tapes.\n- Si l'outil ne retourne rien d'utile ET que la question concerne bien OBC : r�pondre exactement ce texte (sans guillemets autour) :\nC'est une excellente question qui n�cessite l'avis d'un de nos experts.\nJ'ai donc transmis imm�diatement votre demande � l'�quipe support, qui a toutes les informations pour vous r�pondre par email.\n- Si la question ne concerne pas OBC : appliquer la r�gle du **# P�rim�tre** ci-dessous.\n\n# Frustration client\nSi le client exprime clairement de la frustration ou de l'insatisfaction envers le service ou l'outil :\n\n**�tape 1 - Comprendre le probl�me**\nNe pas escalader imm�diatement. D'abord poser une question pour comprendre le probl�me pr�cis :\n� Je suis d�sol�(e). Pouvez-vous me d�crire pr�cis�ment le probl�me que vous rencontrez, afin que je puisse le transmettre au mieux � notre �quipe support ? �\n\n**�tape 2 - Escalader apr�s explication**\nUne fois que le client a d�crit son probl�me, r�pondre exactement ce texte (sans guillemets autour) :\nJe comprends votre frustration ; votre demande a �t� officiellement enregistr�e et transmise en priorit� � notre support.\nUn expert va l'examiner et vous r�pondre personnellement par email dans les plus brefs d�lais.\n\n# Quand ne pas appeler l'outil\n- Simple salutation ou remerciement.\n- Question g�n�rale sur ton r�le (� que sais-tu faire ? �) sans d�tail m�tier.\n- Relance conversationnelle d'une r�ponse d�j� donn�e dans l'historique r�cent (sans nouveau sujet OBC).\nEn cas de doute sur le besoin m�tier : **appeler l'outil**.\n\n# Langue et ton\n- Langue de l'utilisateur (fran�ais par d�faut).\n- Professionnel, p�dagogique ; une seule question de clarification � la fois si n�cessaire.\n\n# Structure des r�ponses\n- Titres ## pour les sections ; listes pour les �tapes.\n- **Gras** pour champs, boutons, menus.\n- S�parateur --- entre grandes sections.\n- Indiquer le **chemin d'acc�s** dans **OBC** quand il est dans la base.\n\n# P�rim�tre\nModules OBC : RH, Op�rations, Finance, Projet, Paiement, CRM.\n- � Global � / Administration syst�me = param�trage global, pas un module m�tier.\n- Toute question sans rapport avec **OBC** (cuisine, chant, sport, actualit�s, etc.) : r�pondre exactement ce texte (sans guillemets autour) :\nCette question ne concerne pas **OBC**. Je suis uniquement en mesure de vous assister sur les fonctionnalit�s de cette application.\n\n# Question vague\n� Pouvez-vous pr�ciser sur quel module ou quelle fonctionnalit� porte votre question ? �\n\n# Erreur utilisateur dans **OBC**\nFournir la proc�dure correcte issue de la base et pr�ciser o� l'erreur survient si l'information est disponible.\n\n# Capture(s) d'�cran OBC (vision)\nSi une ou plusieurs captures sont jointes au message :\n- Pour chaque capture : identifie les �l�ments visibles (menus, onglets, champs, boutons, messages d'erreur, donn�es affich�es).\n- Indique le chemin d'acc�s dans **OBC** si reconnaissable (module, sous-module, �cran).\n- Croise avec la base de connaissance (outil vectoriel) pour compl�ter la r�ponse.\n- Si plusieurs captures : analyse chacune et synth�tise.\n- Si une capture est illisible ou trop floue : demande une capture plus nette avant de r�pondre.\n- Ne jamais inventer d'informations non visibles sur les captures.\n\n# Notes\n- � Global �, � Administration Syst�me � : param�trage global de **OBC**, pas des sous-modules OBC.\n- Achat & vente n'est pas un module. N'invente rien.\n- Ne mentionne jamais \"base de connaissance\" dans tes r�ponses. Le client n'a pas besoin de savoir comment fonctionne le syst�me en arri�re-plan.\n-N'invente jamais de r�ponse.\n-Appelle l'application OBC, pas ERP."
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3.1,
       "position": [
-        128,
+        192,
         0
       ],
       "id": "b0912041-493b-48c2-a3e2-3e5ba697c8b8",
-      "name": "AI Agent"
-    },
-    {
-      "parameters": {
-        "sessionIdType": "customKey",
-        "sessionKey": "={{ $json.sessionId }}",
-        "contextWindowLength": 12
-      },
-      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
-      "typeVersion": 1.3,
-      "position": [
-        208,
-        192
-      ],
-      "id": "fa3703b8-5c35-42d3-9911-b32756d4d8c8",
-      "name": "Postgres Chat Memory",
-      "credentials": {
-        "postgres": {
-          "id": "A2y4YjLT62NuyLCX",
-          "name": "Postgres tickets Onpoint"
-        }
-      }
+      "name": "AI Agent",
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -83,7 +64,7 @@
       "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
       "typeVersion": 1.3,
       "position": [
-        352,
+        416,
         176
       ],
       "id": "ea4f9afb-b462-40fe-972c-2dfe020efb06",
@@ -103,7 +84,7 @@
       "type": "@n8n/n8n-nodes-langchain.embeddingsAzureOpenAi",
       "typeVersion": 1,
       "position": [
-        448,
+        512,
         368
       ],
       "id": "63bc749d-7228-4cab-99a1-05356474b172",
@@ -128,7 +109,7 @@
             {
               "id": "2c1f5c81-5519-4482-8570-5cc613063cb8",
               "leftValue": "={{ $json.output }}",
-              "rightValue": "Je n'ai pas cette information",
+              "rightValue": "n�cessite l'avis d'un de nos experts",
               "operator": {
                 "type": "string",
                 "operation": "contains"
@@ -137,7 +118,7 @@
             {
               "id": "8d37db7e-e399-46a6-9947-b1e44e97d0a2",
               "leftValue": "={{ $json.output }}",
-              "rightValue": "Je transmets immédiatement",
+              "rightValue": "Je comprends votre frustration",
               "operator": {
                 "type": "string",
                 "operation": "contains"
@@ -160,7 +141,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        816,
+        1008,
         0
       ],
       "id": "5a5e49fc-1875-4469-a2e1-1204c75b2f2b",
@@ -175,14 +156,14 @@
           "loadPreviousSession": "notSupported",
           "subtitle": "Disponible 24/7.",
           "title": "Support OBC",
-          "customCss": ":root {\n  /* Colors - Palette dérivée de #0e0c3a */\n  --chat--color--primary: #0e0c3a;\n  --chat--color--primary-shade-50: #0b0a2e;\n  --chat--color--primary--shade-100: #080722;\n  --chat--color--secondary: #4f46e5;\n  --chat--color-secondary-shade-50: #4338ca;\n  --chat--color-white: #fff;\n  --chat--color-light: #f0f0f8;\n  --chat--color-light-shade-50: #e2e2f0;\n  --chat--color-light-shade-100: #c5c5de;\n  --chat--color-medium: #d0d0e8;\n  --chat--color-dark: #0e0c3a;\n  --chat--color-disabled: #c5c5de;\n  --chat--color-typing: #3d3a70;\n\n  /* Base Layout */\n  --chat--spacing: 1rem;\n  --chat--border-radius: 0.25rem;\n  --chat--transition-duration: 0.15s;\n  --chat--font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;\n\n  /* Window Dimensions */\n  --chat--window--width: 400px;\n  --chat--window--height: 600px;\n  --chat--window--bottom: var(--chat--spacing);\n  --chat--window--right: var(--chat--spacing);\n  --chat--window--z-index: 9999;\n  --chat--window--border: 1px solid var(--chat--color-light-shade-50);\n  --chat--window--border-radius: var(--chat--border-radius);\n  --chat--window--margin-bottom: var(--chat--spacing);\n\n  /* Header Styles */\n  --chat--header-height: auto;\n  --chat--header--padding: var(--chat--spacing);\n  --chat--header--background: #0e0c3a;\n  --chat--header--color: #f0f0f8;\n  --chat--header--border-top: none;\n  --chat--header--border-bottom: 1px solid rgba(255, 255, 255, 0.1);\n  --chat--header--border-left: none;\n  --chat--header--border-right: none;\n  --chat--heading--font-size: 2em;\n  --chat--subtitle--font-size: inherit;\n  --chat--subtitle--line-height: 1.8;\n\n  /* Message Styles */\n  --chat--message--font-size: 1rem;\n  --chat--message--padding: var(--chat--spacing);\n  --chat--message--border-radius: var(--chat--border-radius);\n  --chat--message-line-height: 1.5;\n  --chat--message--margin-bottom: calc(var(--chat--spacing) * 1);\n  --chat--message--bot--background: #ffffff;\n  --chat--message--bot--color: #0e0c3a;\n  --chat--message--bot--border: none;\n  --chat--message--user--background: #4f46e5;\n  --chat--message--user--color: #ffffff;\n  --chat--message--user--border: none;\n  --chat--message--pre--background: rgba(14, 12, 58, 0.06);\n  --chat--messages-list--padding: var(--chat--spacing);\n\n  /* Toggle Button */\n  --chat--toggle--size: 64px;\n  --chat--toggle--width: var(--chat--toggle--size);\n  --chat--toggle--height: var(--chat--toggle--size);\n  --chat--toggle--border-radius: 50%;\n  --chat--toggle--background: #0e0c3a;\n  --chat--toggle--hover--background: #0b0a2e;\n  --chat--toggle--active--background: #080722;\n  --chat--toggle--color: #ffffff;\n\n  /* Input Area */\n  --chat--textarea--height: 50px;\n  --chat--textarea--max-height: 30rem;\n  --chat--input--font-size: inherit;\n  --chat--input--border: 0;\n  --chat--input--border-radius: 0;\n  --chat--input--padding: 0.8rem;\n  --chat--input--background: #ffffff;\n  --chat--input--text-color: #0e0c3a;\n  --chat--input--line-height: 1.5;\n  --chat--input--placeholder--font-size: var(--chat--input--font-size);\n  --chat--input--border-active: 0;\n  --chat--input--left--panel--width: 2rem;\n\n  /* Button Styles */\n  --chat--button--padding: calc(var(--chat--spacing) * 5 / 8) var(--chat--spacing);\n  --chat--button--border-radius: var(--chat--border-radius);\n  --chat--button--font-size: 1rem;\n  --chat--button--line-height: 1;\n  --chat--button--color--primary: #f0f0f8;\n  --chat--button--background--primary: #4f46e5;\n  --chat--button--border--primary: none;\n  --chat--button--color--primary--hover: #f0f0f8;\n  --chat--button--background--primary--hover: #4338ca;\n  --chat--button--border--primary--hover: none;\n  --chat--button--color--primary--disabled: #f0f0f8;\n  --chat--button--background--primary--disabled: #a5a1f0;\n  --chat--button--border--primary--disabled: none;\n  --chat--button--color--secondary: #f0f0f8;\n  --chat--button--background--secondary: hsl(0, 0%, 58%);\n  --chat--button--border--secondary: none;\n  --chat--button--color--secondary--hover: #f0f0f8;\n  --chat--button--background--secondary--hover: hsl(0, 0%, 51%);\n  --chat--button--border--secondary--hover: none;\n  --chat--button--color--secondary--disabled: #f0f0f8;\n  --chat--button--background--secondary--disabled: hsl(0, 0%, 78%);\n  --chat--button--border--secondary--disabled: none;\n  --chat--close--button--color-hover: #4f46e5;\n\n  /* Send and File Buttons */\n  --chat--input--send--button--background: #ffffff;\n  --chat--input--send--button--color: #4f46e5;\n  --chat--input--send--button--background-hover: #e2e2f0;\n  --chat--input--send--button--color-hover: #4338ca;\n  --chat--input--file--button--background: #ffffff;\n  --chat--input--file--button--color: #4f46e5;\n  --chat--input--file--button--background-hover: #ffffff;\n  --chat--input--file--button--color-hover: #4338ca;\n  --chat--files-spacing: 0.25rem;\n\n  /* Body and Footer */\n  --chat--body--background: #f0f0f8;\n  --chat--footer--background: #f0f0f8;\n  --chat--footer--color: #0e0c3a;\n}\n\n\n/* You can override any class styles, too. Right-click inspect in Chat UI to find class to override. */\n.chat-message {\n  max-width: 50%;\n}",
+          "customCss": ":root {\n  --chat--color--primary: #0e0c3a;\n  --chat--color--primary-shade-50: #0b0a2e;\n  --chat--color--primary--shade-100: #080722;\n  --chat--color--secondary: #4f46e5;\n  --chat--color-secondary-shade-50: #4338ca;\n  --chat--color-white: #fff;\n  --chat--color-light: #f0f0f8;\n  --chat--color-light-shade-50: #e2e2f0;\n  --chat--color-light-shade-100: #c5c5de;\n  --chat--color-medium: #d0d0e8;\n  --chat--color-dark: #0e0c3a;\n  --chat--color-disabled: #c5c5de;\n  --chat--color-typing: #3d3a70;\n  --chat--spacing: 1rem;\n  --chat--border-radius: 0.25rem;\n  --chat--transition-duration: 0.15s;\n  --chat--font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;\n  --chat--window--width: 400px;\n  --chat--window--height: 600px;\n  --chat--window--bottom: var(--chat--spacing);\n  --chat--window--right: var(--chat--spacing);\n  --chat--window--z-index: 9999;\n  --chat--window--border: 1px solid var(--chat--color-light-shade-50);\n  --chat--window--border-radius: var(--chat--border-radius);\n  --chat--window--margin-bottom: var(--chat--spacing);\n  --chat--header-height: auto;\n  --chat--header--padding: var(--chat--spacing);\n  --chat--header--background: #0e0c3a;\n  --chat--header--color: #f0f0f8;\n  --chat--header--border-top: none;\n  --chat--header--border-bottom: 1px solid rgba(255, 255, 255, 0.1);\n  --chat--header--border-left: none;\n  --chat--header--border-right: none;\n  --chat--heading--font-size: 2em;\n  --chat--subtitle--font-size: inherit;\n  --chat--subtitle--line-height: 1.8;\n  --chat--message--font-size: 1rem;\n  --chat--message--padding: var(--chat--spacing);\n  --chat--message--border-radius: var(--chat--border-radius);\n  --chat--message-line-height: 1.5;\n  --chat--message--margin-bottom: calc(var(--chat--spacing) * 1);\n  --chat--message--bot--background: #ffffff;\n  --chat--message--bot--color: #0e0c3a;\n  --chat--message--bot--border: none;\n  --chat--message--user--background: #4f46e5;\n  --chat--message--user--color: #ffffff;\n  --chat--message--user--border: none;\n  --chat--message--pre--background: rgba(14, 12, 58, 0.06);\n  --chat--messages-list--padding: var(--chat--spacing);\n  --chat--toggle--size: 64px;\n  --chat--toggle--width: var(--chat--toggle--size);\n  --chat--toggle--height: var(--chat--toggle--size);\n  --chat--toggle--border-radius: 50%;\n  --chat--toggle--background: #0e0c3a;\n  --chat--toggle--hover--background: #0b0a2e;\n  --chat--toggle--active--background: #080722;\n  --chat--toggle--color: #ffffff;\n  --chat--textarea--height: 50px;\n  --chat--textarea--max-height: 30rem;\n  --chat--input--font-size: inherit;\n  --chat--input--border: 0;\n  --chat--input--border-radius: 0;\n  --chat--input--padding: 0.8rem;\n  --chat--input--background: #ffffff;\n  --chat--input--text-color: #0e0c3a;\n  --chat--input--line-height: 1.5;\n  --chat--input--placeholder--font-size: var(--chat--input--font-size);\n  --chat--input--border-active: 0;\n  --chat--input--left--panel--width: 2rem;\n  --chat--button--padding: calc(var(--chat--spacing) * 5 / 8) var(--chat--spacing);\n  --chat--button--border-radius: var(--chat--border-radius);\n  --chat--button--font-size: 1rem;\n  --chat--button--line-height: 1;\n  --chat--button--color--primary: #f0f0f8;\n  --chat--button--background--primary: #4f46e5;\n  --chat--button--border--primary: none;\n  --chat--button--color--primary--hover: #f0f0f8;\n  --chat--button--background--primary--hover: #4338ca;\n  --chat--button--border--primary--hover: none;\n  --chat--button--color--primary--disabled: #f0f0f8;\n  --chat--button--background--primary--disabled: #a5a1f0;\n  --chat--button--border--primary--disabled: none;\n  --chat--button--color--secondary: #f0f0f8;\n  --chat--button--background--secondary: hsl(0, 0%, 58%);\n  --chat--button--border--secondary: none;\n  --chat--button--color--secondary--hover: #f0f0f8;\n  --chat--button--background--secondary--hover: hsl(0, 0%, 51%);\n  --chat--button--border--secondary--hover: none;\n  --chat--button--color--secondary--disabled: #f0f0f8;\n  --chat--button--background--secondary--disabled: hsl(0, 0%, 78%);\n  --chat--button--border--secondary--disabled: none;\n  --chat--close--button--color-hover: #4f46e5;\n  --chat--input--send--button--background: #ffffff;\n  --chat--input--send--button--color: #4f46e5;\n  --chat--input--send--button--background-hover: #e2e2f0;\n  --chat--input--send--button--color-hover: #4338ca;\n  --chat--input--file--button--background: #ffffff;\n  --chat--input--file--button--color: #4f46e5;\n  --chat--input--file--button--background-hover: #ffffff;\n  --chat--input--file--button--color-hover: #4338ca;\n  --chat--files-spacing: 0.25rem;\n  --chat--body--background: #f0f0f8;\n  --chat--footer--background: #f0f0f8;\n  --chat--footer--color: #0e0c3a;\n}\n.chat-message { max-width: 50%; }",
           "responseMode": "streaming"
         }
       },
       "type": "@n8n/n8n-nodes-langchain.chatTrigger",
       "typeVersion": 1.4,
       "position": [
-        -272,
+        -576,
         0
       ],
       "id": "ee57dcdc-df27-4748-8fa3-2d347d43fa8b",
@@ -191,152 +172,35 @@
     },
     {
       "parameters": {
-        "dataTableId": {
-          "__rl": true,
-          "value": "ZD9dFgpD9aIdBznq",
-          "mode": "list",
-          "cachedResultName": "logs chatbot support",
-          "cachedResultUrl": "/projects/FWqhhc90z90D3dtH/datatables/ZD9dFgpD9aIdBznq"
-        },
-        "columns": {
-          "mappingMode": "defineBelow",
-          "value": {
-            "questions_posees": "={{ $('When chat message received').item.json.chatInput }}",
-            "reponse_chatbot": "={{ $('AI Agent').item.json.output }}",
-            "session_id": "={{ $('When chat message received').item.json.sessionId }}",
-            "user_id": "={{ $('When chat message received').item.json.userId ?? '' }}",
-            "erp_session_id": "={{ $('When chat message received').item.json.erpSessionId ?? '' }}",
-            "page_url": "={{ $('When chat message received').item.json.pageUrl ?? '' }}",
-            "traite": "={{ 'non' }}",
-            "priorite": "={{ 'normale' }}"
-          },
-          "matchingColumns": [],
-          "schema": [
-            {
-              "id": "questions_posees",
-              "displayName": "questions_posees",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "reponse_chatbot",
-              "displayName": "reponse_chatbot",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "session_id",
-              "displayName": "session_id",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "user_id",
-              "displayName": "user_id",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "erp_session_id",
-              "displayName": "erp_session_id",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "page_url",
-              "displayName": "page_url",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "traite",
-              "displayName": "traite",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "priorite",
-              "displayName": "priorite",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            }
-          ],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": false
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.dataTable",
-      "typeVersion": 1.1,
-      "position": [
-        1056,
-        -16
-      ],
-      "id": "151fc7bc-f7af-42b9-89a3-89b67da9ee94",
-      "name": "Insert row"
-    },
-    {
-      "parameters": {
         "operation": "executeQuery",
-        "query": "=UPDATE public.n8n_chat_histories SET user_id = '{{ $('When chat message received').item.json.userId ?? \"\" }}', erp_session_id = '{{ $('When chat message received').item.json.erpSessionId ?? \"\" }}', page_url = '{{ $('When chat message received').item.json.pageUrl ?? \"\" }}' WHERE session_id = '{{ $('When chat message received').item.json.sessionId }}' AND (user_id IS NULL OR TRIM(COALESCE(user_id, '')) = '')",
+        "query": "UPDATE public.n8n_chat_histories\nSET user_id = '{{ $('When chat message received').item.json.userId ?? \"\" }}',\n    erp_session_id = '{{ $('When chat message received').item.json.erpSessionId ?? \"\" }}',\n    page_url = '{{ $('When chat message received').item.json.pageUrl ?? \"\" }}'\nWHERE session_id = '{{ $('When chat message received').item.json.sessionId }}'\n  AND (user_id IS NULL OR TRIM(COALESCE(user_id, '')) = '');",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        500,
-        -200
+        704,
+        -176
       ],
       "id": "a1b2c3d4-audit-hist-0001-000000000001",
       "name": "Update Chat History Audit",
-      "continueOnFail": true,
+      "notesInFlow": true,
       "credentials": {
         "postgres": {
-          "id": "A2y4YjLT62NuyLCX",
-          "name": "Postgres tickets Onpoint"
+          "id": "VqXSEWjkUOLADTtz",
+          "name": "Postgres Base de connaissance"
         }
-      }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "jsCode": "const expected = 'REDACTED_Emma_SECRET';\n\nconst headers =\n  $json?.headers ??\n  $input.first()?.json?.headers ??\n  {};\n\nconst got =\n  headers['x-emma-secret'] ||\n  headers['X-Emma-Secret'] ||\n  $json?.emmaSecret ||\n  $input.first()?.json?.emmaSecret;\n\nif (got !== expected) {\n  throw new Error('Unauthorized: secret manquant ou invalide');\n}\n\nreturn $input.all();"
+        "jsCode": "const expected = 'REDACTED_SECRET';\nconst headers = $json?.headers ?? $input.first()?.json?.headers ?? {};\nconst got = headers['x-emma-secret'] || headers['X-Emma-Secret'] || $json?.emmaSecret || $input.first()?.json?.emmaSecret;\nif (got !== expected) { throw new Error('Unauthorized: secret manquant ou invalide'); }\nreturn $input.all();"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -64,
+        -336,
         0
       ],
       "id": "9e629128-f39a-4b74-8b80-c0117323357a",
@@ -345,37 +209,503 @@
     {
       "parameters": {
         "sendTo": "vdakpogan@onpointafrica.com, ekouassi@onpointafrica.com, mngbra@onpointafrica.com, agnaore@onpointafrica.com",
-        "subject": "=⚠️ Emma KB — Question sans réponse : {{ $('When chat message received').item.json.chatInput }}",
-        "message": "=<h2>Question sans réponse dans la base de connaissance</h2><p><strong>Question posée :</strong><br>{{ $('When chat message received').item.json.chatInput }}</p><p><strong>Réponse du chatbot :</strong><br>{{ $('AI Agent').item.json.output }}</p><hr><p><strong>Session ID :</strong> {{ $('When chat message received').item.json.sessionId }}<br><strong>User ID :</strong> {{ $('When chat message received').item.json.userId ?? 'N/A' }}<br><strong>Page :</strong> {{ $('When chat message received').item.json.pageUrl ?? 'N/A' }}<br><strong>Date :</strong> {{ $now.toISO() }}</p><hr><p><em>➡️ Penser à enrichir la KB avec cette information.</em></p>",
+        "subject": "=?? Emma KB - Question sans r�ponse : {{ $('When chat message received').item.json.chatInput }}",
+        "message": "=<h2>Question sans r�ponse dans la base de connaissance</h2><p><strong>Question pos�e :</strong><br>{{ $('When chat message received').item.json.chatInput }}</p><p><strong>R�ponse du chatbot :</strong><br>{{ $('Filtre bruit alerte').item.json.output }}</p><hr><p><strong>Session ID :</strong> {{ $('When chat message received').item.json.sessionId }}<br><strong>User ID :</strong> {{ $('When chat message received').item.json.userId ?? 'N/A' }}<br><strong>Page :</strong> {{ $('When chat message received').item.json.pageUrl ?? 'N/A' }}<br><strong>Date :</strong> {{ $now.toISO() }}</p><hr><p><em>?? Penser � enrichir la KB avec cette information.</em></p>",
         "options": {}
       },
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        1136,
+        1200,
         400
       ],
       "id": "b2c3d4e5-alert-mail-0001-000000000001",
       "name": "Alerte KB manquante",
+      "webhookId": "8c07d85a-38f8-40eb-a0ec-5e28bd30d588",
       "credentials": {
         "gmailOAuth2": {
           "id": "dCta90mUtnu2yZgn",
-          "name": "Gmail Onpoint"
+          "name": "Gmail account"
         }
       }
     },
     {
       "parameters": {
-        "jsCode": "// Filtre bruit : ne laisse passer que les questions avec une substance métier réelle.\n// Même logique que le rapport hebdo (LOW_SIGNAL_EXACT + règles courtes).\nconst LOW_SIGNAL = new Set([\n  'ensuite','et ensuite','et apres','apres','alors','donc','voila',\n  'cherche bien','cherche encore','regarde bien','tu peux chercher',\n  'reflechis','continue','vas y','vasy',\n  'oui','non','ok','okay','merci','merci beaucoup',\n  'd accord','dacord','ah ok','super','parfait','top','nickel','niquel','cool',\n  'bah','ben','euh','hm','hmm','ouais','nan','na','lol','haha','gg',\n  'hello','bonjour','salut','hey','coucou',\n]);\n\nfunction normalize(s) {\n  return String(s)\n    .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '')\n    .toLowerCase()\n    .replace(/[''`´]/g, ' ')\n    .replace(/[^\\w\\s]/gi, ' ')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\nconst question = $input.first()?.json?.chatInput ||\n  $('When chat message received').item?.json?.chatInput || '';\n\nconst k = normalize(question);\nconst words = k.split(/\\s+/).filter(Boolean);\n\n// Exclure : vide, trop court, dans la liste, ou moins de 4 mots sans chiffre ni terme technique\nif (!k || k.length < 8 || LOW_SIGNAL.has(k) || words.length < 3) {\n  return [];\n}\n\nreturn $input.all();"
+        "jsCode": "const LOW_SIGNAL = new Set(['ensuite','et ensuite','et apres','apres','alors','donc','voila','cherche bien','cherche encore','regarde bien','tu peux chercher','reflechis','continue','vas y','vasy','oui','non','ok','okay','merci','merci beaucoup','d accord','dacord','ah ok','super','parfait','top','nickel','niquel','cool','bah','ben','euh','hm','hmm','ouais','nan','na','lol','haha','gg','hello','bonjour','salut','hey','coucou']);\nfunction normalize(s) { return String(s).normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().replace(/[''`�]/g,' ').replace(/[^\\w\\s]/gi,' ').replace(/\\s+/g,' ').trim(); }\nconst question = $input.first()?.json?.chatInput || $('When chat message received').item?.json?.chatInput || '';\nconst k = normalize(question);\nconst words = k.split(/\\s+/).filter(Boolean);\nif (!k || k.length < 8 || LOW_SIGNAL.has(k) || words.length < 3) { return []; }\nreturn $input.all();"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1136,
+        1200,
         560
       ],
       "id": "f1lt3r-kb-alert-0001-000000000001",
       "name": "Filtre bruit alerte"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "chatbot_logs",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldValue": "={{ $('When chat message received').item.json.chatInput }}",
+              "fieldId": "question"
+            },
+            {
+              "fieldValue": "={{ $('AI Agent').item.json.output }}",
+              "fieldId": "reponse"
+            },
+            {
+              "fieldValue": "={{ $('When chat message received').item.json.sessionId }}",
+              "fieldId": "session_id"
+            },
+            {
+              "fieldValue": "={{ $('When chat message received').item.json.userId ?? '' }}",
+              "fieldId": "user_id"
+            },
+            {
+              "fieldValue": "={{ $('When chat message received').item.json.erpSessionId ?? '' }}",
+              "fieldId": "erp_session_id"
+            },
+            {
+              "fieldValue": "={{ $('When chat message received').item.json.pageUrl ?? '' }}",
+              "fieldId": "page_url"
+            },
+            {
+              "fieldValue": "={{ false }}",
+              "fieldId": "traite"
+            },
+            {
+              "fieldValue": "={{ $('AI Agent').item.json.output.includes(\"Je n'ai pas cette information\") || $('AI Agent').item.json.output.includes(\"Je transmets\") || $('AI Agent').item.json.output.includes(\"ne concerne pas l'ERP OBC\") }}",
+              "fieldId": "sans_reponse_kb"
+            },
+            {
+              "fieldValue": "={{ 'normale' }}",
+              "fieldId": "priorite"
+            },
+            {
+              "fieldValue": "={{ (Array.isArray($('When chat message received').item.json.imageDataUrls) && $('When chat message received').item.json.imageDataUrls.length > 0) || !!(($('When chat message received').item.json.imageDataUrl ?? '').trim()) }}",
+              "fieldId": "has_image"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1.2,
+      "position": [
+        1840,
+        -192
+      ],
+      "id": "supa-chatbot-logs-insert-01",
+      "name": "Insert Supabase chatbot_logs",
+      "credentials": {
+        "supabaseApi": {
+          "id": "Zp3hBZH55D2rdC1S",
+          "name": "supabase emma bot onpoin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "len-check",
+              "leftValue": "={{ $('When chat message received').item.json.chatInput.trim().length }}",
+              "rightValue": 15,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            },
+            {
+              "id": "noise-check",
+              "leftValue": "={{ $('When chat message received').item.json.chatInput.trim().toLowerCase() }}",
+              "rightValue": "^(ok|oui|non|merci|bonjour|salut|bonsoir|hello|hi|continue|ensuite|suite|d'accord|super|parfait|bien|compris|c'est bon|je vois|je comprends|svp|stp|allez|vas-y|go|next|suivant|encore|et)\\s*[.!?,;:]*$",
+              "operator": {
+                "type": "string",
+                "operation": "notRegex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        704,
+        0
+      ],
+      "id": "filtre-bruit-question-01",
+      "name": "Filtre bruit question"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Noud : Pr�parer image(s) - v2 multi-images\n// Supporte imageDataUrls[] (array, widget 0.7+) et imageDataUrl (single, compat 0.6).\n// Convertit chaque base64 en binaire nomm� data0, data1... pour AI Agent passthrough vision.\n// Transparent si aucune image : retourne l'item sans modification.\nconst item = $input.first();\nconst arr = item?.json?.imageDataUrls;\nconst single = item?.json?.imageDataUrl;\nconst urls = (Array.isArray(arr) && arr.length > 0)\n  ? arr\n  : (single && typeof single === 'string' && single.startsWith('data:image/') ? [single] : []);\n\nif (urls.length === 0) { return $input.all(); }\n\nconst extMap = { 'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif' };\nconst binary = {};\n\nfor (let i = 0; i < urls.length; i++) {\n  const match = String(urls[i]).match(/^data:(image\\/[a-zA-Z0-9+.-]+);base64,(.+)$/);\n  if (!match) continue;\n  const mimeType = match[1];\n  const base64Data = match[2];\n  if (base64Data.length > 4 * 1024 * 1024) continue;\n  const ext = extMap[mimeType] || 'jpg';\n  binary['data' + i] = {\n    data: base64Data,\n    mimeType: mimeType,\n    fileName: 'capture_obc_' + (i + 1) + '.' + ext,\n    fileSize: Math.round(base64Data.length * 0.75),\n    fileExtension: ext\n  };\n}\n\nif (Object.keys(binary).length === 0) { return $input.all(); }\nreturn [{ json: item.json, binary: binary }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -128,
+        0
+      ],
+      "id": "preparer-image-obc-vision-01",
+      "name": "Pr�parer image",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2c1f5c81-5519-4482-8570-5cc613063cb8",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "Je n'ai pas cette information",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "8d37db7e-e399-46a6-9947-b1e44e97d0a2",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "Je transmets imm�diatement",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "92e683a4-10d0-4f89-8e76-06f33d381f5f",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "ne concerne pas l'ERP OBC",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2496,
+        288
+      ],
+      "id": "debbecc6-fdc3-46b8-bc05-b41a25eee4a3",
+      "name": "If1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    output: \"Je comprends votre frustration ; votre demande a �t� officiellement enregistr�e et transmise en priorit� � notre support. Un expert va l'examiner et vous r�pondre personnellement par email dans les plus brefs d�lais.\"\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        704,
+        -368
+      ],
+      "id": "b945dee4-8fda-4b46-a0e9-809dcc63028a",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        912,
+        -368
+      ],
+      "id": "48f3a6ac-17f0-4a36-a3ef-891455063f07",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const LOW_SIGNAL = new Set(['ensuite','et ensuite','et apres','apres','alors','donc','voila','cherche bien','cherche encore','regarde bien','tu peux chercher','reflechis','continue','vas y','vasy','oui','non','ok','okay','merci','merci beaucoup','d accord','dacord','ah ok','super','parfait','top','nickel','niquel','cool','bah','ben','euh','hm','hmm','ouais','nan','na','lol','haha','gg','hello','bonjour','salut','hey','coucou']);\nfunction normalize(s) { return String(s).normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().replace(/[''`�]/g,' ').replace(/[^\\w\\s]/gi,' ').replace(/\\s+/g,' ').trim(); }\nconst question = $input.first()?.json?.chatInput || $('When chat message received').item?.json?.chatInput || '';\nconst k = normalize(question);\nconst words = k.split(/\\s+/).filter(Boolean);\nif (!k || k.length < 8 || LOW_SIGNAL.has(k) || words.length < 3) { return []; }\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        -368
+      ],
+      "id": "c590be2e-742d-40ae-b1e0-708e4d59d684",
+      "name": "Filtre bruit alerte1"
+    },
+    {
+      "parameters": {
+        "sendTo": "vdakpogan@onpointafrica.com, ekouassi@onpointafrica.com, mngbra@onpointafrica.com, agnaore@onpointafrica.com",
+        "subject": "=?? Emma KB - Question sans r�ponse : {{ $('When chat message received').item.json.chatInput }}",
+        "message": "=<h2>Question sans r�ponse dans la base de connaissance</h2><p><strong>Question pos�e :</strong><br>{{ $('When chat message received').item.json.chatInput }}</p><p><strong>R�ponse du chatbot :</strong><br>{{ $('Filtre bruit alerte').item.json.output }}</p><hr><p><strong>Session ID :</strong> {{ $('When chat message received').item.json.sessionId }}<br><strong>User ID :</strong> {{ $('When chat message received').item.json.userId ?? 'N/A' }}<br><strong>Page :</strong> {{ $('When chat message received').item.json.pageUrl ?? 'N/A' }}<br><strong>Date :</strong> {{ $now.toISO() }}</p><hr><p><em>?? Penser � enrichir la KB avec cette information.</em></p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1344,
+        -368
+      ],
+      "id": "2c6cc61b-6479-4fc7-baff-31abbe1d3d2e",
+      "name": "Alerte KB manquante1",
+      "webhookId": "8c07d85a-38f8-40eb-a0ec-5e28bd30d588",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "dCta90mUtnu2yZgn",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "systemMessage": "=# R�le\nTu es l'assistant support pour l'ERP **OBC**. Tu r�ponds en t'appuyant sur la base de connaissance (outil de recherche vectorielle) pour tout ce qui concerne des fonctionnalit�s, �crans ou proc�dures.\n\n# Message d'accueil\nLorsque l'utilisateur envoie un premier message de salutation (bonjour, salut, hello, bonsoir, hi) ou demande qui tu es, r�pondre exactement ce texte (sans guillemets autour) :\nBonjour, je suis Emma, votre assistante OBC.\nJe suis l� pour vous guider dans l'utilisation des fonctionnalit�s.\nComment puis-je vous aider aujourd'hui ?\n\n# R�gle de recherche\n- Avant toute r�ponse **factuelle** sur OBC : utiliser l'outil de recherche vectorielle.\n- Baser la r�ponse sur les extraits retourn�s ; n'invente pas de menus ni d'�tapes.\n- Si l'outil ne retourne rien d'utile ET que la question concerne bien OBC : r�pondre exactement ce texte (sans guillemets autour) :\nC'est une excellente question qui n�cessite l'avis d'un de nos experts.\nJ'ai donc transmis imm�diatement votre demande � l'�quipe support, qui a toutes les informations pour vous r�pondre par email.\n- Si la question ne concerne pas OBC : appliquer la r�gle du **# P�rim�tre** ci-dessous.\n\n# Frustration client\nSi le client exprime clairement de la frustration ou de l'insatisfaction envers le service ou l'outil :\n\n**�tape 1 - Comprendre le probl�me**\nNe pas escalader imm�diatement. D'abord poser une question pour comprendre le probl�me pr�cis :\n� Je suis d�sol�(e) que vous rencontriez cette difficult�. Pouvez-vous me d�crire pr�cis�ment le probl�me que vous rencontrez, afin que je puisse le transmettre au mieux � notre �quipe support ? �\n\n**�tape 2 - Escalader apr�s explication**\nUne fois que le client a d�crit son probl�me, r�pondre exactement ce texte (sans guillemets autour) :\nJe comprends votre frustration ; votre demande a �t� officiellement enregistr�e et transmise en priorit� � notre support.\nUn expert va l'examiner et vous r�pondre personnellement par email dans les plus brefs d�lais.\n\n# Quand ne pas appeler l'outil\n- Simple salutation ou remerciement.\n- Question g�n�rale sur ton r�le (� que sais-tu faire ? �) sans d�tail m�tier.\n- Relance conversationnelle d'une r�ponse d�j� donn�e dans l'historique r�cent (sans nouveau sujet OBC).\nEn cas de doute sur le besoin m�tier : **appeler l'outil**.\n\n# Langue et ton\n- Langue de l'utilisateur (fran�ais par d�faut).\n- Professionnel, p�dagogique ; une seule question de clarification � la fois si n�cessaire.\n\n# Structure des r�ponses\n- Titres ## pour les sections ; listes pour les �tapes.\n- **Gras** pour champs, boutons, menus.\n- S�parateur --- entre grandes sections.\n- Indiquer le **chemin d'acc�s** dans l'ERP quand il est dans la base.\n\n# P�rim�tre\nModules OBC : RH, Op�rations, Finance, Projet, Paiement, CRM.\n- � Global � / Administration syst�me = param�trage global, pas un module m�tier.\n- Toute question sans rapport avec l'ERP OBC (cuisine, chant, sport, actualit�s, etc.) : r�pondre exactement ce texte (sans guillemets autour) :\nCette question ne concerne pas l'ERP OBC. Je suis uniquement en mesure de vous assister sur les fonctionnalit�s de cet ERP.\n\n# Question vague\n� Pouvez-vous pr�ciser sur quel module ou quelle fonctionnalit� porte votre question ? �\n\n# Erreur utilisateur dans l'ERP\nFournir la proc�dure correcte issue de la base et pr�ciser o� l'erreur survient si l'information est disponible.\n\n# Capture(s) d'�cran OBC (vision)\nSi une ou plusieurs captures sont jointes au message :\n- Pour chaque capture : identifie les �l�ments visibles (menus, onglets, champs, boutons, messages d'erreur, donn�es affich�es).\n- Indique le chemin d'acc�s dans l'ERP si reconnaissable (module, sous-module, �cran).\n- Croise avec la base de connaissance (outil vectoriel) pour compl�ter la r�ponse.\n- Si plusieurs captures : analyse chacune et synth�tise.\n- Si une capture est illisible ou trop floue : demande une capture plus nette avant de r�pondre.\n- Ne jamais inventer d'informations non visibles sur les captures.\n\n# Notes\n- � Global �, � Administration Syst�me � : param�trage global de l'ERP, pas des sous-modules OBC.\n- Achat & vente n'est pas un module. N'invente rien.\n- Ne mentionne jamais \"base de connaissance\" dans tes r�ponses. Le client n'a pas besoin de savoir comment fonctionne le syst�me en arri�re-plan.\n-N'invente jamais de r�ponse."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2464,
+        512
+      ],
+      "id": "1b886e6b-6da0-4eb1-99b6-6c8bbaa9780a",
+      "name": "AI Agent1",
+      "disabled": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.sessionId }}",
+        "contextWindowLength": 12
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        240,
+        192
+      ],
+      "id": "b547cd83-7a9c-49f8-9e84-752b7ee3474b",
+      "name": "Postgres Chat Memory",
+      "credentials": {
+        "postgres": {
+          "id": "VqXSEWjkUOLADTtz",
+          "name": "Postgres Base de connaissance"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "chatbot_logs",
+          "mode": "list",
+          "cachedResultName": "chatbot_logs"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "traite": false,
+            "sans_reponse_kb": "={{ $('AI Agent').item.json.output.includes(\"n�cessite l'avis d'un de nos experts\") || $('AI Agent').item.json.output.includes(\"transmis imm�diatement votre demande\") || $('AI Agent').item.json.output.includes(\"ne concerne pas\") }}",
+            "question": "={{ $('When chat message received').item.json.chatInput }}",
+            "reponse": "={{ $('AI Agent').item.json.output }}",
+            "session_id": "={{ $('When chat message received').item.json.sessionId }}",
+            "user_id": "={{ $('When chat message received').item.json.userId ?? '' }}",
+            "erp_session_id": "={{ $('When chat message received').item.json.erpSessionId ?? '' }}",
+            "page_url": "={{ $('When chat message received').item.json.pageUrl ?? '' }}",
+            "priorite": "=normale",
+            "has_image": "={{ (Array.isArray($('When chat message received').item.json.imageDataUrls) && $('When chat message received').item.json.imageDataUrls.length > 0) || !!(($('When chat message received').item.json.imageDataUrl ?? '').trim()) }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "question",
+              "displayName": "question",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "reponse",
+              "displayName": "reponse",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "user_id",
+              "displayName": "user_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "erp_session_id",
+              "displayName": "erp_session_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "page_url",
+              "displayName": "page_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "traite",
+              "displayName": "traite",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sans_reponse_kb",
+              "displayName": "sans_reponse_kb",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "priorite",
+              "displayName": "priorite",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "satisfaction",
+              "displayName": "satisfaction",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "satisfaction_at",
+              "displayName": "satisfaction_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "has_image",
+              "displayName": "has_image",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "image_path",
+              "displayName": "image_path",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1328,
+        176
+      ],
+      "id": "22ccb520-2b9b-48e5-b91c-a9137f07e645",
+      "name": "Insert rows in a table",
+      "credentials": {
+        "postgres": {
+          "id": "VqXSEWjkUOLADTtz",
+          "name": "Postgres Base de connaissance"
+        }
+      },
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
@@ -394,12 +724,19 @@
       "main": [
         [
           {
-            "node": "If",
+            "node": "Update Chat History Audit",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Update Chat History Audit",
+            "node": "Filtre bruit question",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code in JavaScript",
             "type": "main",
             "index": 0
           }
@@ -409,17 +746,6 @@
     "Update Chat History Audit": {
       "main": [
         []
-      ]
-    },
-    "Postgres Chat Memory": {
-      "ai_memory": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_memory",
-            "index": 0
-          }
-        ]
       ]
     },
     "Supabase Vector Store": {
@@ -448,27 +774,11 @@
       "main": [
         [
           {
-            "node": "Insert row",
-            "type": "main",
-            "index": 0
-          },
-          {
             "node": "Filtre bruit alerte",
             "type": "main",
             "index": 0
           }
         ],
-        [
-          {
-            "node": "Insert row",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Insert row": {
-      "main": [
         []
       ]
     },
@@ -484,6 +794,17 @@
       ]
     },
     "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Pr�parer image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pr�parer image": {
       "main": [
         [
           {
@@ -508,6 +829,72 @@
     "Alerte KB manquante": {
       "main": [
         []
+      ]
+    },
+    "Insert Supabase chatbot_logs": {
+      "main": [
+        []
+      ]
+    },
+    "Filtre bruit question": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Insert rows in a table",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        [
+          {
+            "node": "Filtre bruit alerte1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtre bruit alerte1": {
+      "main": [
+        [
+          {
+            "node": "Alerte KB manquante1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
       ]
     }
   },
