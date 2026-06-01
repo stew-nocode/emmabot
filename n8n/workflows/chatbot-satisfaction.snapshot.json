@@ -1,0 +1,125 @@
+{
+  "meta": {
+    "workflowId": "CQAIA9u8jwn4kh9N",
+    "workflowName": "Chatbot Satisfaction Feedback",
+    "active": true,
+    "exportedAt": "2026-06-01T18:32:13.503Z",
+    "warning": "Snapshot sanitizé pour Git. Réattacher les credentials dans n8n avant réimport."
+  },
+  "name": "Chatbot Satisfaction Feedback",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chatbot-satisfaction",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -608,
+        0
+      ],
+      "id": "wh-satisfaction-01",
+      "name": "Webhook Satisfaction",
+      "webhookId": "chatbot-satisfaction-emma"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ⚠️ IMPORTANT : Copier le même secret que dans le workflow chatbot\n// (noeud \"Code in JavaScript1\", variable \"expected\")\nconst EXPECTED_SECRET = 'OnpointGrowth34';\n\nconst headers = $json?.headers ?? {};\nconst got =\n  headers['x-emma-secret'] ||\n  headers['X-Emma-Secret'] ||\n  $json?.body?.emmaSecret ||\n  '';\n\nif (!EXPECTED_SECRET || EXPECTED_SECRET === '__MEME_SECRET_QUE_CHATBOT__') {\n  throw new Error('Secret non configuré — ouvrir le noeud et remplacer le placeholder.');\n}\n\nif (got !== EXPECTED_SECRET) {\n  throw new Error('Unauthorized: secret manquant ou invalide');\n}\n\nconst body = $json?.body ?? {};\nconst sessionId = (body.sessionId || '').trim();\nconst question = (body.question || '').trim();\nconst satisfaction = (body.satisfaction || '').trim();\n\nif (!sessionId) throw new Error('Champ sessionId requis');\nif (!question) throw new Error('Champ question requis');\nif (satisfaction !== 'positif' && satisfaction !== 'negatif') {\n  throw new Error('satisfaction doit être \"positif\" ou \"negatif\"');\n}\n\nconst esc = (s) => s.replace(/'/g, \"''\");\n\nreturn [{\n  json: {\n    sessionId: esc(sessionId),\n    question: esc(question),\n    satisfaction\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -304,
+        0
+      ],
+      "id": "code-validate-01",
+      "name": "Valider secret et payload"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=WITH updated AS (\n  UPDATE chatbot_logs\n  SET satisfaction = '{{ $json.satisfaction }}',\n      satisfaction_at = NOW()\n  WHERE id = (\n    SELECT id FROM chatbot_logs\n    WHERE session_id = '{{ $json.sessionId }}'\n    AND question = '{{ $json.question }}'\n    ORDER BY created_at DESC\n    LIMIT 1\n  )\n  RETURNING id, satisfaction\n)\nSELECT\n  COALESCE((SELECT id::text FROM updated), '') AS log_id,\n  COALESCE((SELECT satisfaction FROM updated), '') AS satisfaction,\n  CASE WHEN EXISTS (SELECT 1 FROM updated) THEN true ELSE false END AS updated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        0,
+        0
+      ],
+      "id": "pg-update-satisfaction-01",
+      "name": "Update satisfaction",
+      "credentials": {
+        "postgres": {
+          "id": "VqXSEWjkUOLADTtz",
+          "name": "Postgres Base de connaissance"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.first()?.json ?? {};\n\nif (result.updated === true || result.updated === 'true') {\n  return [{ json: { ok: true, logId: result.log_id, satisfaction: result.satisfaction } }];\n}\n\nreturn [{ json: { ok: false, error: 'Aucun log chatbot correspondant à cette session/question.' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        304,
+        0
+      ],
+      "id": "code-response-01",
+      "name": "Formater réponse"
+    }
+  ],
+  "connections": {
+    "Webhook Satisfaction": {
+      "main": [
+        [
+          {
+            "node": "Valider secret et payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valider secret et payload": {
+      "main": [
+        [
+          {
+            "node": "Update satisfaction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update satisfaction": {
+      "main": [
+        [
+          {
+            "node": "Formater réponse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formater réponse": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true,
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "timezone": "Europe/Paris"
+  },
+  "staticData": null
+}

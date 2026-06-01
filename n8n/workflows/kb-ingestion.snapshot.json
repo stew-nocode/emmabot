@@ -1,0 +1,222 @@
+{
+  "meta": {
+    "workflowId": "0N79gbdF8LxmTkny",
+    "workflowName": "KB Ingestion Webhook (OnpointDoc)",
+    "active": true,
+    "exportedAt": "2026-06-01T18:32:12.999Z",
+    "warning": "Snapshot sanitizé pour Git. Réattacher les credentials dans n8n avant réimport."
+  },
+  "name": "KB Ingestion Webhook (OnpointDoc)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kb-ingestion",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -608,
+        0
+      ],
+      "id": "wh-kb-01",
+      "name": "Webhook KB Ingestion",
+      "webhookId": "kb-ingestion-onpointdoc"
+    },
+    {
+      "parameters": {
+        "jsCode": "const root = $json.body ?? $json;\nconst record = root.record ?? root;\n\nconst action =\n  root.action ??\n  (root.type === 'INSERT' ? 'create' : root.type === 'UPDATE' ? 'update' : undefined);\n\nconst idAssist = root.idAssist ?? record.id_assist;\nconst mod = root.module ?? record.Module;\nconst sousModule = root.sousModule ?? record['Sous-module'];\nconst thematique =\n  root.thematique ?? record['Thématique'] ?? record.thematique;\nconst reponse =\n  root.reponse ??\n  record['Réponses / étapes à suivre'] ??\n  record.reponse;\n\nif (!thematique || !reponse) {\n  throw new Error('Champs manquants: thématique et réponse sont requis.');\n}\n\nconst content = `Module: ${mod || ''}\nSous-module: ${sousModule || ''}\nQuestion: ${thematique}\nRéponse: ${reponse}`.trim();\n\nconst metadata = {\n  id_assist: idAssist,\n  module: mod || '',\n  sous_module: sousModule || '',\n  thematique: thematique\n};\n\nreturn [{ json: { action, idAssist, content, metadata: JSON.stringify(metadata) } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -352,
+        0
+      ],
+      "id": "code-prepare-01",
+      "name": "Préparer contenu et metadata"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": false,
+        "resource": "row",
+        "operation": "delete",
+        "tableId": "documents",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id_assist",
+              "condition": "eq",
+              "keyValue": "={{ $json.idAssist }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -96,
+        0
+      ],
+      "id": "supa-delete-01",
+      "name": "Supprimer ancien document",
+      "credentials": {
+        "supabaseApi": {
+          "id": "Zp3hBZH55D2rdC1S",
+          "name": "supabase emma bot onpoin"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://emman-mn50aetk-switzerlandnorth.cognitiveservices.azure.com/openai/deployments/text-embedding-3-small/embeddings?api-version=2023-05-15",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "azureOpenAiApi",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "input",
+              "value": "={{ $('Préparer contenu et metadata').item.json.content }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        160,
+        0
+      ],
+      "id": "http-embed-01",
+      "name": "Azure Embedding",
+      "credentials": {
+        "azureOpenAiApi": {
+          "id": "9B6Fbm1qcEsdNfLx",
+          "name": "mon text embeding"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const content = $('Préparer contenu et metadata').item.json.content;\nconst metadata = $('Préparer contenu et metadata').item.json.metadata;\nconst idAssist = $('Préparer contenu et metadata').item.json.idAssist;\nconst embedding = $json.data[0].embedding;\nconst embeddingString = '[' + embedding.join(',') + ']';\n\nreturn [{ json: { content, metadata, embedding: embeddingString, id_assist: idAssist } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        0
+      ],
+      "id": "code-vector-01",
+      "name": "Formater vecteur"
+    },
+    {
+      "parameters": {
+        "tableId": "documents",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "content",
+              "fieldValue": "={{ $json.content }}"
+            },
+            {
+              "fieldId": "metadata",
+              "fieldValue": "={{ $json.metadata }}"
+            },
+            {
+              "fieldId": "embedding",
+              "fieldValue": "={{ $json.embedding }}"
+            },
+            {
+              "fieldId": "id_assist",
+              "fieldValue": "={{ $json.id_assist }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        656,
+        0
+      ],
+      "id": "supa-insert-01",
+      "name": "Insérer document vectorisé",
+      "credentials": {
+        "supabaseApi": {
+          "id": "Zp3hBZH55D2rdC1S",
+          "name": "supabase emma bot onpoin"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook KB Ingestion": {
+      "main": [
+        [
+          {
+            "node": "Préparer contenu et metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Préparer contenu et metadata": {
+      "main": [
+        [
+          {
+            "node": "Supprimer ancien document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supprimer ancien document": {
+      "main": [
+        [
+          {
+            "node": "Azure Embedding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Azure Embedding": {
+      "main": [
+        [
+          {
+            "node": "Formater vecteur",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formater vecteur": {
+      "main": [
+        [
+          {
+            "node": "Insérer document vectorisé",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true
+  },
+  "staticData": null
+}
