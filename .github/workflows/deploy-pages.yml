@@ -1,10 +1,9 @@
-# Déploie le site (index.html, emma-widget.js, etc.) sur GitHub Pages.
-# Génère local.config.js au build à partir du secret EMMA_SECRET (jamais commité).
+# Déploie le widget Emma sur GitHub Pages : emma-widget.js, avatar, modèle d'intégration, README.
+# AUCUN secret n'est publié. La page de test index.html et local.config.js restent locales :
+# jusqu'au 14/09/2026, le site publiait en clair le secret en service du chat (local.config.js
+# généré depuis EMMA_SECRET, et index.html). Un widget navigateur ne peut de toute façon pas
+# garder de secret ; la protection du chat se fait côté n8n.
 # Prérequis : Settings → Pages → Source : GitHub Actions.
-#
-# Secret EMMA_SECRET — une des deux options (le plus simple = 1) :
-#   1) Settings → Secrets and variables → Actions → Repository secrets → EMMA_SECRET
-#   2) Settings → Environments → github-pages → Environment secrets → EMMA_SECRET
 
 name: Deploy GitHub Pages
 
@@ -32,37 +31,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Generate local.config.js from EMMA_SECRET
-        env:
-          EMMA_SECRET: ${{ secrets.EMMA_SECRET }}
-        run: |
-          if [ -z "${EMMA_SECRET:-}" ]; then
-            echo '::error title=Secret manquant::EMMA_SECRET est vide ou absent.'
-            echo '::error::Ajoutez un secret nommé exactement EMMA_SECRET :'
-            echo '::error::  • (recommandé) Repo → Settings → Secrets and variables → Actions → New repository secret'
-            echo '::error::  • (alternative) Settings → Environments → github-pages → Environment secrets'
-            echo '::error::Puis relancez ce workflow (Re-run jobs).'
-            exit 1
-          fi
-          node <<'NODE'
-          const fs = require('fs');
-          const s = process.env.EMMA_SECRET;
-          const cfg = {
-            webhookHeaders: { 'X-Emma-Secret': s },
-            sharedSecret: s,
-          };
-          const body =
-            '// Généré par GitHub Actions au déploiement. Ne pas commiter.\n' +
-            'window.__EMMA_LOCAL_CONFIG = ' +
-            JSON.stringify(cfg, null, 2) +
-            ';\n';
-          fs.writeFileSync('local.config.js', body, 'utf8');
-          NODE
-
       - name: Préparer le dossier publié (_site)
         run: |
           mkdir -p _site
-          cp index.html emma-widget.js emma-avatar.png EMBED_SNIPPET.html README.md local.config.example.js local.config.js _site/
+          cp emma-widget.js emma-avatar.png EMBED_SNIPPET.html README.md _site/
           : > _site/.nojekyll
 
       - name: Configure Pages

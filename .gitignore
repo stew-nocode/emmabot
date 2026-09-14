@@ -3,3 +3,7 @@ local.config.js
 
 # Corps JSON temporaire pour PUT n8n (scripts locaux)
 .n8n_put_chatbot_body.json
+
+# Sauvegardes brutes de workflows n8n : contiennent le secret du chat en clair
+.n8n_chatbot_backup.json
+.n8n_*_backup.json

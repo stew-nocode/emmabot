@@ -44,34 +44,14 @@ Les en-têtes HTTP ne sont en général **pas** disponibles dans `$json.headers`
 - `const got = ($json.headers?.['x-emma-secret'] || $json.headers?.['X-Emma-Secret'] || $json.emmaSecret);`
 - Compare `got` à la valeur attendue comme avant.
 
-## Démo GitHub Pages pour les responsables (sans installation locale)
+## Publication GitHub Pages (widget uniquement)
 
-Objectif : faire tester le chat sur `https://<user>.github.io/emmabot/` **avant** intégration par les devs, sans copier `local.config.js` sur chaque poste.
+Le workflow `.github/workflows/deploy-pages.yml` publie à chaque push sur `main` : `emma-widget.js`, `emma-avatar.png`, `EMBED_SNIPPET.html` et ce README. OBC charge le widget depuis `https://stew-nocode.github.io/emmabot/emma-widget.js`.
 
-1. **Secret `EMMA_SECRET` (obligatoire pour que le workflow réussisse)**  
-   **Méthode recommandée** — secret au niveau du dépôt :  
-   **Settings → Secrets and variables → Actions** → onglet **Secrets** → **New repository secret**  
-   - Name : `EMMA_SECRET` (exactement, respecter la casse)  
-   - Secret : la **même valeur** que dans N8N (`X-Emma-Secret` / `emmaSecret`).  
+**Aucun secret n'est publié.** Jusqu'au 14/09/2026, le site publiait aussi la page de test `index.html` et un `local.config.js` généré depuis le secret GitHub `EMMA_SECRET` : le secret en service du chat était lisible par tous. La page de test se lance désormais uniquement en local (voir « Démo locale » plus haut) et le workflow n'utilise plus `EMMA_SECRET`.
 
-   **Alternative** : **Settings → Environments → `github-pages` → Environment secrets** → ajouter `EMMA_SECRET`.  
-   Si le workflow affiche encore « secret absent », utilise surtout la **méthode recommandée** (Actions du dépôt).
-
-2. **Source Pages** : **Settings → Pages** → **Build and deployment** → Source : **GitHub Actions**. Ne pas cliquer sur « Configure » pour Jekyll / Static HTML : le workflow **Deploy GitHub Pages** est déjà dans `.github/workflows/deploy-pages.yml`.
-
-3. **Déploiement** : onglet **Actions** → **Deploy GitHub Pages** → **Run workflow** (ou push sur `main`). Après un échec, une fois le secret ajouté : **Re-run all jobs**.  
-   Le site publié est construit dans un dossier `_site` (sans exposer `.github/` sur Pages). `local.config.js` n’est **pas** commité dans Git.
-
-4. **Lien à transmettre** : `https://stew-nocode.github.io/emmabot/` (adapter si le compte ou le repo change).
+**Limite importante** : un widget navigateur ne peut pas garder de secret. Celui qu'OBC transmet reste lisible dans les outils de développement de chaque utilisateur. La protection du chat se fait côté n8n (validation, limitation du nombre de messages), ou plus tard par un proxy serveur côté OBC.
 
 ### Aligner les questions rapides (chips) avec le RAG
 
-GitHub Pages sert **`index.html`** du dépôt. Si, en local, vous testez via une page qui reprend **`EMBED_SNIPPET.html`**, les textes des **suggestions** doivent être **strictement les mêmes** (y compris l’**espace avant `?`**). Une petite différence peut changer l’embedding et, selon les chunks, n’affecter qu’une question (ex. bon de commande). Après modification de `index.html`, refaire un **push sur `main`** pour redéployer Pages.
-
-### Si le workflow est rouge (« EMMA_SECRET absent »)
-
-- Vérifier que le secret s’appelle bien **`EMMA_SECRET`** (pas `EMMA_SECRETS`, pas d’espace).  
-- Le créer sous **Secrets and variables → Actions** (repository secret), pas seulement sous Dependabot / Codespaces.  
-- Relancer le workflow.
-
-**Limite importante** : le secret finit dans le JavaScript servi au navigateur. Toute personne qui ouvre l’URL peut le retrouver (Outils de développement). Réservez l’URL à un **usage interne** et prévoyez plus tard un **proxy serveur** côté appli pour la prod si le périmètre N8N est sensible.
+Si une intégration reprend les **suggestions** de `index.html`, les textes doivent être **strictement les mêmes** (y compris l'**espace avant `?`**). Une petite différence peut changer l'embedding et, selon les chunks, n'affecter qu'une question (ex. bon de commande).
