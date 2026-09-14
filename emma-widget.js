@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  const EMMA_WIDGET_VERSION = '0.7.5';
+  const EMMA_WIDGET_VERSION = '0.8.0';
 
   // ── Already loaded guard ──
   if (global.EmmaChat) return;
@@ -33,6 +33,13 @@
     // - "conversation": new session each time the widget is started (not persisted)
     sessionScope: 'browser',
     sessionStorageKey: 'emma_chat_session_id',
+    // sessionIdleTimeoutMs: au-delà de ce délai sans message, la conversation repart de zéro
+    // (nouvelle session côté n8n, fenêtre vidée). 0 = jamais. Ne concerne que les sessions persistées.
+    sessionIdleTimeoutMs: 2 * 60 * 60 * 1000,
+    newConversationLabel: 'Nouvelle conversation',
+    // onNewConversation: ({ sessionId, raison }) => {} — raison : 'bouton' | 'inactivite' | 'api'.
+    // L'hôte doit y effacer toute copie de la conversation qu'il conserve (ex. messages reçus via onMessage).
+    onNewConversation: null,
     // requestTimeoutMs: max wait for the whole request (headers + streaming body). 0 = disabled.
     requestTimeoutMs: 90000,
     timeoutMessage: 'Délai dépassé. Veuillez réessayer dans un instant.',
@@ -230,22 +237,44 @@
     }
   }
 
+  /** Stockage et clé de la session persistée ; null si la session n'est pas persistée (id imposé, scope conversation). */
+  function sessionStore(cfg) {
+    if (cfg.sessionId && String(cfg.sessionId).trim()) return null;
+    const scope = (cfg.sessionScope || 'browser').toLowerCase();
+    if (scope === 'conversation') return null;
+    const storage = scope === 'tab' ? safeGetSessionStorage() : safeGetLocalStorage();
+    return storage ? { storage, key: effectiveSessionStorageKey(cfg) } : null;
+  }
+
+  /**
+   * Vrai si une session enregistrée est restée sans message plus de sessionIdleTimeoutMs.
+   * Une session sans horodatage (antérieure à la 0.8.0) est considérée comme expirée.
+   */
+  function isSessionExpired(cfg) {
+    const store = sessionStore(cfg);
+    const idleMs = Number(cfg.sessionIdleTimeoutMs);
+    if (!store || !(idleMs > 0) || !store.storage.getItem(store.key)) return false;
+    const lastActivity = Number(store.storage.getItem(store.key + ':activity'));
+    return !lastActivity || Date.now() - lastActivity > idleMs;
+  }
+
+  function markSessionActivity(cfg) {
+    const store = sessionStore(cfg);
+    if (store) store.storage.setItem(store.key + ':activity', String(Date.now()));
+  }
+
   function resolveSessionId(cfg, opts) {
     if (cfg.sessionId && String(cfg.sessionId).trim()) return String(cfg.sessionId).trim();
-    const scope = (cfg.sessionScope || 'browser').toLowerCase();
+    const store = sessionStore(cfg);
+    if (!store) return createSessionId();
 
-    // conversation scope: always new (unless explicitly overridden by cfg.sessionId)
-    if (scope === 'conversation' || (opts && opts.forceNew)) return createSessionId();
-
-    const storage = scope === 'tab' ? safeGetSessionStorage() : safeGetLocalStorage();
-    if (!storage) return createSessionId();
-
-    const storageKey = effectiveSessionStorageKey(cfg);
-    const existing = storage.getItem(storageKey);
-    if (existing && existing.trim()) return existing.trim();
+    const existing = store.storage.getItem(store.key);
+    const forceNew = opts && opts.forceNew;
+    if (existing && existing.trim() && !forceNew && !isSessionExpired(cfg)) return existing.trim();
 
     const fresh = createSessionId();
-    storage.setItem(storageKey, fresh);
+    store.storage.setItem(store.key, fresh);
+    markSessionActivity(cfg);
     return fresh;
   }
 
@@ -309,6 +338,7 @@
         transition:background .15s;
       }
       .emma-close-btn:hover { background:#EDEEF2; }
+      .emma-header-actions { display:flex; align-items:center; gap:6px; }
 
       .emma-welcome {
         flex:1; display:flex; flex-direction:column;
@@ -549,6 +579,9 @@
 
   // ── Build HTML ──
   function buildWidget(cfg) {
+    // Une session restée inactive trop longtemps est remplacée dès le chargement ;
+    // l'hôte en est prévenu (plus bas) pour effacer sa propre copie de la conversation.
+    const expiredOnLoad = isSessionExpired(cfg);
     let sessionId = resolveSessionId(cfg);
     let isSending = false;
     /** Images en attente d'envoi : tableau de { dataUrl, thumbUrl } (max 3). */
@@ -660,11 +693,18 @@
             <div class="emma-agent-status">${escapeHtmlStr(cfg.agentStatus)}</div>
           </div>
         </div>
-        <button class="emma-close-btn" id="emma-close">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2.2">
-            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
+        <div class="emma-header-actions">
+          <button class="emma-close-btn" id="emma-new" title="${escapeAttrStr(cfg.newConversationLabel)}" aria-label="${escapeAttrStr(cfg.newConversationLabel)}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2.2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="9" y1="10" x2="15" y2="10"/>
+            </svg>
+          </button>
+          <button class="emma-close-btn" id="emma-close" aria-label="Fermer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2.2">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
       </div>
 
       <!-- Welcome -->
@@ -754,6 +794,7 @@
 
     launcher.addEventListener('click', () => toggle());
     widget.querySelector('#emma-close').addEventListener('click', () => close());
+    widget.querySelector('#emma-new').addEventListener('click', () => newConversation('bouton'));
     widget.querySelector('#emma-start').addEventListener('click', () => startChat());
     widget.querySelector('#emma-send').addEventListener('click', () => sendMessage());
     const emmaInput = widget.querySelector('#emma-input');
@@ -768,6 +809,7 @@
       isOpen ? close() : open();
     }
     function open() {
+      if (isSessionExpired(cfg)) newConversation('inactivite');
       widget.classList.add('open');
       launcher.classList.add('open');
       if (typeof cfg.onOpen === 'function') cfg.onOpen();
@@ -776,6 +818,21 @@
       widget.classList.remove('open');
       launcher.classList.remove('open');
       if (typeof cfg.onClose === 'function') cfg.onClose();
+    }
+    function notifyNewConversation(raison) {
+      if (typeof cfg.onNewConversation === 'function') cfg.onNewConversation({ sessionId, raison });
+    }
+    /** Repart de zéro : nouvelle session (mémoire n8n vide) et fenêtre vidée. */
+    function newConversation(raison) {
+      if (isSending) return;
+      sessionId = resolveSessionId(cfg, { forceNew: true });
+      Array.from(elMessages.children).forEach(function (el) {
+        if (el.id !== 'emma-chips-wrap') el.remove();
+      });
+      clearPendingImages();
+      const chips = widget.querySelector('#emma-chips');
+      if (chips) chips.style.display = '';
+      notifyNewConversation(raison);
     }
     function startChat() {
       if (String(cfg.sessionScope || '').toLowerCase() === 'conversation') {
@@ -821,7 +878,10 @@
     }
     async function sendText(text) {
       if (isSending) return;
+      // Fenêtre restée ouverte au-delà du délai d'inactivité : la question ouvre une nouvelle conversation.
+      if (isSessionExpired(cfg)) newConversation('inactivite');
       isSending = true;
+      markSessionActivity(cfg);
       const chips = widget.querySelector('#emma-chips');
       if (chips) chips.style.display = 'none';
       setSendingUI(true);
@@ -1516,10 +1576,11 @@
       btnNeg.onclick = function () { sendVote('negatif'); };
     }
 
+    if (expiredOnLoad) notifyNewConversation('inactivite');
     if (cfg.autoOpen) setTimeout(open, 300);
 
     // ── Public API ──
-    return { open, close, toggle };
+    return { open, close, toggle, newConversation: () => newConversation('api') };
   }
 
   // ── Public EmmaChat API ──
@@ -1555,6 +1616,8 @@
     open:   function () { this._api && this._api.open(); },
     close:  function () { this._api && this._api.close(); },
     toggle: function () { this._api && this._api.toggle(); },
+    /** Repart de zéro (nouvelle session, fenêtre vidée) ; déclenche onNewConversation. */
+    newConversation: function () { this._api && this._api.newConversation(); },
   };
 
 })(window);
