@@ -1,8 +1,8 @@
 <!-- ================================================================
-     EMMA WIDGET — Snippet d'intégration ERP
+     EMMA WIDGET 0.8.0 — Snippet d'intégration ERP
      À placer dans le <head> ou juste avant </body>.
      ================================================================ -->
-<script src="https://stew-nocode.github.io/emmabot/emma-widget.js?v=0.7.5"></script>
+<script src="https://stew-nocode.github.io/emmabot/emma-widget.js?v=0.8.0"></script>
 
 <script>
   EmmaChat.init({
@@ -24,15 +24,32 @@
 
     // Identifiant stable de l'utilisateur connecté dans l'ERP.
     // Permet d'isoler la session par utilisateur et de tracer les échanges.
+    // ⚠️ Ne PAS passer de sessionId : un identifiant imposé désactive la remise à zéro
+    // après inactivité et le bouton « Nouvelle conversation » (la mémoire d'Emma serait conservée).
     userId: "ID_UTILISATEUR_ERP",
 
     // Identifiant de la session de connexion ERP (token, UUID…).
     erpSessionId: "ID_SESSION_ERP",
 
     // URL ou chemin de la page ERP affichée au moment du message.
-    pageUrl: window.location.href
+    pageUrl: window.location.href,
 
     // (SPA uniquement) Décommenter à la place de pageUrl si l'URL change sans rechargement.
-    // getPageUrl: () => window.location.pathname + window.location.search
+    // getPageUrl: () => window.location.pathname + window.location.search,
+
+    // Nouveau (0.8.0) : délai sans message après lequel la conversation repart de zéro.
+    // Défaut 2 heures ; 0 = jamais.
+    // sessionIdleTimeoutMs: 2 * 60 * 60 * 1000,
+
+    // Nouveau (0.8.0) : appelé au clic sur « Nouvelle conversation », après le délai d'inactivité,
+    // ou via EmmaChat.newConversation(). Le widget ne conserve aucun message : si l'ERP en garde
+    // une copie (ex. via onMessage), il doit la clôturer ici et ne jamais la réafficher à la connexion.
+    onNewConversation: function (evt) {
+      // evt.sessionId : identifiant de la nouvelle conversation
+      // evt.raison    : "bouton" | "inactivite" | "api"
+    }
   });
+
+  // Nouveau (0.8.0), optionnel : repartir de zéro à la déconnexion de l'utilisateur (poste partagé).
+  // EmmaChat.newConversation();
 </script>
