@@ -65,6 +65,8 @@
     EmmaChat.init(Object.assign({
       webhookUrl:       'https://n8n.srv1336912.hstgr.cloud/webhook/e239be12-d954-4ebf-92e1-d9fca1cbdcca/chat',
       webhookRoute:     'general',
+      // Obligatoire depuis le 14/09/2026 : n8n refuse tout message sans identifiant utilisateur.
+      userId:           'TEST_LOCAL',
       agentName:        'Emma',
       agentStatus:      'En ligne',
       logoUrl: (function () {
