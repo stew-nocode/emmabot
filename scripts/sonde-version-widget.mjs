@@ -32,7 +32,11 @@ const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 const SOURCES = [
   { nom: 'production OBC', url: 'https://onpointsunrise.com/Scripts/emma/emma-widget.js' },
-  { nom: 'notre publication', url: 'https://stew-nocode.github.io/emmabot/emma-widget.js' }
+  { nom: 'notre publication', url: 'https://widget.onnext-solution.com/emma/0.8.1/emma-widget.js' },
+  // GitHub Pages est l'ancienne voie de publication. Elle DOIT rester éteinte : elle sert le dépôt
+  // ENTIER, y compris index.html qui porte l'URL du webhook n8n. Si cette ligne rend une version,
+  // c'est que Pages a été réactivé et que le dépôt est de nouveau exposé.
+  { nom: 'ancienne voie (doit être morte)', url: 'https://stew-nocode.github.io/emmabot/emma-widget.js', doitEtreMorte: true }
 ];
 
 const MOTIF_VERSION = /EMMA_WIDGET_VERSION\s*=\s*['"]([^'"]+)['"]/;
@@ -69,15 +73,20 @@ async function versionLocale() {
 
 const resultats = [...(await Promise.all(SOURCES.map(versionDistante))), await versionLocale()];
 
-const enErreur = resultats.filter((r) => r.erreur);
-const versions = new Set(resultats.filter((r) => r.version).map((r) => r.version));
+// Une source marquée `doitEtreMorte` qui répond est une alerte, pas une information : on la sort
+// de la comparaison de versions et on la signale à part.
+const ressuscitee = resultats.find((r) => SOURCES.find((s) => s.url === r.url)?.doitEtreMorte && r.version);
+const aComparer = resultats.filter((r) => !SOURCES.find((s) => s.url === r.url)?.doitEtreMorte);
+
+const enErreur = aComparer.filter((r) => r.erreur);
+const versions = new Set(aComparer.filter((r) => r.version).map((r) => r.version));
 const diverge = versions.size > 1;
 
 const prod = resultats.find((r) => r.nom === 'production OBC');
 const nous = resultats.find((r) => r.nom === 'notre publication');
 
-const verdict = enErreur.length ? 'INJOIGNABLE' : diverge ? 'DIVERGENCE' : 'CONCORDE';
-const code = enErreur.length ? 2 : diverge ? 1 : 0;
+const verdict = ressuscitee ? 'ANCIENNE VOIE RÉACTIVÉE' : enErreur.length ? 'INJOIGNABLE' : diverge ? 'DIVERGENCE' : 'CONCORDE';
+const code = ressuscitee || diverge ? 1 : enErreur.length ? 2 : 0;
 
 if (process.argv.includes('--json')) {
   console.log(JSON.stringify({ verdict, code, resultats, mesureLe: new Date().toISOString() }, null, 2));
@@ -89,6 +98,11 @@ if (process.argv.includes('--json')) {
   }
   console.log('');
   console.log(`  VERDICT : ${verdict}`);
+  if (ressuscitee) {
+    console.log('');
+    console.log('  GitHub Pages republie le dépôt ENTIER, index.html compris, qui porte');
+    console.log('  l\'URL du webhook n8n. À éteindre : Settings → Pages → Source : None.');
+  }
   if (diverge && prod?.version && nous?.version) {
     console.log('');
     console.log(`  La production sert ${prod.version}, nous publions ${nous.version}.`);
