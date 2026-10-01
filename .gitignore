@@ -1,3 +1,8 @@
+# Dossier publié, entièrement reconstruit par scripts/preparer-publication.mjs.
+# Ne jamais le versionner : ce serait une deuxième copie du widget, c'est-à-dire
+# exactement le problème que ce chantier supprime.
+public/
+
 # Secret local pour la démo (copie de local.config.example.js)
 local.config.js
 
