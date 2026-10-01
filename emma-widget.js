@@ -1,10 +1,16 @@
 (function (global) {
   'use strict';
 
-  const EMMA_WIDGET_VERSION = '0.8.1';
+  const EMMA_WIDGET_VERSION = '0.8.2';
 
   // ── Already loaded guard ──
-  if (global.EmmaChat) return;
+  // Nuance introduite en 0.8.2 : `loader.js` pose un TALON sur window.EmmaChat avant nous, pour
+  // encaisser les appels de l'hôte pendant notre chargement (asynchrone). Sans la distinction
+  // ci-dessous, la garde prendrait ce talon pour un widget déjà installé, renoncerait, et le chat
+  // ne s'ouvrirait JAMAIS. Un talon se reconnaît à son marqueur `_talon` ; tout le reste est un
+  // vrai widget, et le premier arrivé garde la main (comportement inchangé).
+  const talon = global.EmmaChat && global.EmmaChat._talon === true ? global.EmmaChat : null;
+  if (global.EmmaChat && !talon) return;
 
   // ── Default config ──
   const DEFAULTS = {
@@ -1795,5 +1801,24 @@
     /** Repart de zéro (nouvelle session, fenêtre vidée) ; déclenche onNewConversation. */
     newConversation: function () { this._api && this._api.newConversation(); },
   };
+
+  // ── Rejeu de la file du talon (0.8.2) ──
+  // L'hôte a pu appeler init(), open()… avant que ce fichier n'arrive. `loader.js` a rangé ces
+  // appels dans une file ; on les rejoue DANS L'ORDRE, pour que le résultat soit celui d'un
+  // chargement synchrone. Un appel qui échoue n'interrompt pas les suivants : mieux vaut un
+  // widget partiellement configuré qu'un chat éteint.
+  if (talon && Array.isArray(talon._file)) {
+    const file = talon._file.slice();
+    talon._file.length = 0;
+    for (let i = 0; i < file.length; i++) {
+      const methode = file[i] && file[i][0];
+      if (typeof global.EmmaChat[methode] !== 'function') continue;
+      try {
+        global.EmmaChat[methode](file[i][1]);
+      } catch (e) {
+        try { console.error('[Emma] rejeu de ' + methode + '() : ' + (e && e.message ? e.message : e)); } catch (_) {}
+      }
+    }
+  }
 
 })(window);
