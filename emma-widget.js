@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  const EMMA_WIDGET_VERSION = '0.8.0';
+  const EMMA_WIDGET_VERSION = '0.8.1';
 
   // ── Already loaded guard ──
   if (global.EmmaChat) return;
@@ -40,6 +40,21 @@
     // onNewConversation: ({ sessionId, raison }) => {} — raison : 'bouton' | 'inactivite' | 'api'.
     // L'hôte doit y effacer toute copie de la conversation qu'il conserve (ex. messages reçus via onMessage).
     onNewConversation: null,
+    // ── Persistance de la conversation (0.8.1) ──
+    // Pensé pour un ERP en navigation pleine page, où chaque écran recharge le document :
+    // sans cela, la conversation disparaîtrait à chaque clic de menu.
+    // L'échange est rangé dans localStorage sous une clé SUFFIXÉE PAR LE sessionId. Il suit donc
+    // le sort de la session : `sessionIdleTimeoutMs` la remplace, la clé change, l'historique
+    // restitué est vide. Les deux mécanismes se composent, ils ne s'opposent pas.
+    // Défaut false : un widget ne se met pas à écrire des conversations sur le poste sans qu'on
+    // le lui demande. Les intégrations ERP l'activent explicitement (cf. EMBED_SNIPPET.html).
+    persistConversation: false,
+    conversationTranscriptKeyPrefix: 'emma_chat_transcript_v1:',
+    // Plafond du JSON stocké : au-delà, les plus anciens messages sont retirés par paires.
+    maxTranscriptJsonChars: 450000,
+    // Mémorise si le panneau était déplié, pour le rouvrir après une navigation complète.
+    persistPanelOpen: false,
+    panelOpenStorageKeyPrefix: 'emma_chat_panel_open_v1:',
     // requestTimeoutMs: max wait for the whole request (headers + streaming body). 0 = disabled.
     requestTimeoutMs: 90000,
     timeoutMessage: 'Délai dépassé. Veuillez réessayer dans un instant.',
@@ -261,6 +276,43 @@
   function markSessionActivity(cfg) {
     const store = sessionStore(cfg);
     if (store) store.storage.setItem(store.key + ':activity', String(Date.now()));
+  }
+
+  /** Préfixe de clé nettoyé, avec repli sur la valeur par défaut si la configuration est vide. */
+  function prefixeOuDefaut(valeur, defaut) {
+    return (String(valeur == null ? '' : valeur).trim() || defaut);
+  }
+
+  /**
+   * Supprime les traces des sessions précédentes.
+   *
+   * Sans cela, chaque expiration laisse derrière elle une clé de transcript pouvant peser
+   * `maxTranscriptJsonChars`. Avec un délai de 2 h, cela fait plusieurs clés par jour et par
+   * utilisateur, pour un quota localStorage de l'ordre de 5 Mo. À saturation, les écritures
+   * échouent EN SILENCE puisqu'elles sont enveloppées dans des `catch` : le widget semble
+   * fonctionner et ne garde plus rien. On purge donc à chaque remise à zéro.
+   */
+  function purgeTracesDesSessionsPrecedentes(cfg, sessionIdCourant) {
+    const store = sessionStore(cfg);
+    if (!store) return;
+    const prefixes = [
+      prefixeOuDefaut(cfg.conversationTranscriptKeyPrefix, DEFAULTS.conversationTranscriptKeyPrefix),
+      prefixeOuDefaut(cfg.panelOpenStorageKeyPrefix, DEFAULTS.panelOpenStorageKeyPrefix)
+    ];
+    try {
+      const aSupprimer = [];
+      for (let i = 0; i < store.storage.length; i++) {
+        const cle = store.storage.key(i);
+        if (!cle) continue;
+        for (const prefixe of prefixes) {
+          // On ne touche qu'aux clés d'une AUTRE session : celle en cours vient d'être créée.
+          if (cle.indexOf(prefixe) === 0 && cle !== prefixe + sessionIdCourant) aSupprimer.push(cle);
+        }
+      }
+      aSupprimer.forEach(function (cle) { store.storage.removeItem(cle); });
+    } catch (_) {
+      // Stockage indisponible (navigation privée, quota) : rien à purger, rien à signaler.
+    }
   }
 
   function resolveSessionId(cfg, opts) {
@@ -583,7 +635,86 @@
     // l'hôte en est prévenu (plus bas) pour effacer sa propre copie de la conversation.
     const expiredOnLoad = isSessionExpired(cfg);
     let sessionId = resolveSessionId(cfg);
+    // La session vient d'être remplacée : l'ancien transcript n'est plus atteignable (clé
+    // différente), mais il occupe toujours la place. On le retire tout de suite.
+    if (expiredOnLoad) purgeTracesDesSessionsPrecedentes(cfg, sessionId);
     let isSending = false;
+
+    // ── Persistance de la conversation (0.8.1) ──
+    // Sans objet quand chaque ouverture crée déjà une session neuve.
+    const persistanceActive =
+      cfg.persistConversation === true &&
+      String(cfg.sessionScope || 'browser').toLowerCase() !== 'conversation' &&
+      !!sessionStore(cfg);
+
+    function stockagePersistance() {
+      const store = sessionStore(cfg);
+      return store ? store.storage : null;
+    }
+    function transcriptStorageKey() {
+      return prefixeOuDefaut(cfg.conversationTranscriptKeyPrefix, DEFAULTS.conversationTranscriptKeyPrefix) + sessionId;
+    }
+    function panelOpenStorageKey() {
+      return prefixeOuDefaut(cfg.panelOpenStorageKeyPrefix, DEFAULTS.panelOpenStorageKeyPrefix) + sessionId;
+    }
+    function persistPanelOpenWrite(estOuvert) {
+      if (!persistanceActive || cfg.persistPanelOpen !== true) return;
+      try {
+        const ls = stockagePersistance();
+        if (ls) ls.setItem(panelOpenStorageKey(), estOuvert ? '1' : '0');
+      } catch (_) {}
+    }
+    function persistPanelOpenRead() {
+      if (!persistanceActive || cfg.persistPanelOpen !== true) return false;
+      try {
+        const ls = stockagePersistance();
+        return !!ls && ls.getItem(panelOpenStorageKey()) === '1';
+      } catch (_) { return false; }
+    }
+    /** Les messages déjà échangés dans CETTE session, relus au chargement de la page. */
+    let transcriptBuffer = (function chargerTranscript() {
+      if (!persistanceActive) return [];
+      try {
+        const ls = stockagePersistance();
+        if (!ls) return [];
+        const brut = ls.getItem(transcriptStorageKey());
+        if (!brut || !String(brut).trim()) return [];
+        const liste = JSON.parse(brut);
+        return Array.isArray(liste) ? liste.filter((e) => e && (e.role === 'user' || e.role === 'bot')) : [];
+      } catch (_) { return []; }
+    })();
+    /** Vrai pendant le rejeu : empêche de réécrire ce qu'on est en train de relire. */
+    let rejeuEnCours = false;
+
+    function persistTranscriptSave() {
+      if (!persistanceActive) return;
+      try {
+        const ls = stockagePersistance();
+        if (!ls) return;
+        const max = Number(cfg.maxTranscriptJsonChars) || DEFAULTS.maxTranscriptJsonChars;
+        let json = JSON.stringify(transcriptBuffer);
+        // On retire par paires pour ne pas laisser une question sans sa réponse.
+        while (json.length > max && transcriptBuffer.length > 2) {
+          transcriptBuffer = transcriptBuffer.slice(2);
+          json = JSON.stringify(transcriptBuffer);
+        }
+        ls.setItem(transcriptStorageKey(), json);
+      } catch (_) {}
+    }
+    function persistTranscriptAppend(entree) {
+      if (!persistanceActive || rejeuEnCours) return;
+      if (!entree || (entree.role !== 'user' && entree.role !== 'bot')) return;
+      transcriptBuffer.push({ role: entree.role, text: String(entree.text == null ? '' : entree.text) });
+      persistTranscriptSave();
+    }
+    function viderTranscript() {
+      transcriptBuffer = [];
+      if (!persistanceActive) return;
+      try {
+        const ls = stockagePersistance();
+        if (ls) { ls.removeItem(transcriptStorageKey()); ls.removeItem(panelOpenStorageKey()); }
+      } catch (_) {}
+    }
     /** Images en attente d'envoi : tableau de { dataUrl, thumbUrl } (max 3). */
     let pendingImages = [];
     const MAX_IMAGES = 3;
@@ -812,11 +943,13 @@
       if (isSessionExpired(cfg)) newConversation('inactivite');
       widget.classList.add('open');
       launcher.classList.add('open');
+      persistPanelOpenWrite(true);
       if (typeof cfg.onOpen === 'function') cfg.onOpen();
     }
     function close() {
       widget.classList.remove('open');
       launcher.classList.remove('open');
+      persistPanelOpenWrite(false);
       if (typeof cfg.onClose === 'function') cfg.onClose();
     }
     function notifyNewConversation(raison) {
@@ -825,7 +958,11 @@
     /** Repart de zéro : nouvelle session (mémoire n8n vide) et fenêtre vidée. */
     function newConversation(raison) {
       if (isSending) return;
+      // Dans cet ordre : on efface le transcript TANT QUE sa clé pointe encore sur la session
+      // qui se termine, puis on bascule, puis on balaie ce que d'anciennes sessions ont laissé.
+      viderTranscript();
       sessionId = resolveSessionId(cfg, { forceNew: true });
+      purgeTracesDesSessionsPrecedentes(cfg, sessionId);
       Array.from(elMessages.children).forEach(function (el) {
         if (el.id !== 'emma-chips-wrap') el.remove();
       });
@@ -1143,7 +1280,11 @@
           el.innerHTML = '';
           el.textContent = 'Aucune réponse reçue.';
         }
-        if (fullText) addFeedbackButtons(thinkingEl, text, { kbConsulted: streamKbMeta, replyText: fullText });
+        if (fullText) {
+          addFeedbackButtons(thinkingEl, text, { kbConsulted: streamKbMeta, replyText: fullText });
+          // Le flux ne passe pas par addBotMessage : on enregistre ici, une fois le texte complet.
+          persistTranscriptAppend({ role: 'bot', text: fullText });
+        }
         if (typeof cfg.onMessage === 'function') cfg.onMessage({ role: 'bot', text: fullText });
       } catch (e) {
         if (pendingStreamRaf != null) {
@@ -1192,11 +1333,16 @@
       row.appendChild(bubble);
       elMessages.appendChild(row);
       scrollBottom();
+      // Les images ne sont pas conservées : un message qui n'en contient que ne laisse rien.
+      if (text || !(imageDataUrls && imageDataUrls.length)) {
+        persistTranscriptAppend({ role: 'user', text: text || '' });
+      }
     }
     function addBotMessage(text) {
       const el = addBotMessageEl('');
       el.innerHTML = formatMessage(text);
       scrollBottom();
+      persistTranscriptAppend({ role: 'bot', text: text || '' });
     }
     function addBotMessageEl(text) {
       const row = document.createElement('div');
@@ -1576,8 +1722,38 @@
       btnNeg.onclick = function () { sendVote('negatif'); };
     }
 
+    /**
+     * Rejoue l'échange de la session en cours après un rechargement complet de la page.
+     * Rend true si quelque chose a été restitué.
+     */
+    function restituerLaConversation() {
+      if (!persistanceActive || !transcriptBuffer.length) return false;
+      rejeuEnCours = true;
+      try {
+        widget.querySelector('#emma-welcome').style.display = 'none';
+        widget.querySelector('#emma-chat').classList.add('active');
+        transcriptBuffer.forEach(function (e) {
+          if (e.role === 'user') addUserMessage(e.text || '', []);
+          else if (e.role === 'bot') addBotMessage(e.text || '');
+        });
+        renderChips();
+        const champ = widget.querySelector('#emma-input');
+        if (champ) champ.focus();
+      } finally {
+        rejeuEnCours = false;
+      }
+      return true;
+    }
+
     if (expiredOnLoad) notifyNewConversation('inactivite');
-    if (cfg.autoOpen) setTimeout(open, 300);
+
+    const conversationRestituee = restituerLaConversation();
+    if (persistPanelOpenRead()) {
+      // Le panneau était déplié avant la navigation : on le rouvre sans attendre.
+      setTimeout(open, 0);
+    } else if (cfg.autoOpen && !conversationRestituee) {
+      setTimeout(open, 300);
+    }
 
     // ── Public API ──
     return { open, close, toggle, newConversation: () => newConversation('api') };

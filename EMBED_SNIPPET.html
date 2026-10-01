@@ -1,8 +1,13 @@
 <!-- ================================================================
-     EMMA WIDGET 0.8.0 — Snippet d'intégration ERP
+     EMMA WIDGET 0.8.1 — Snippet d'intégration ERP
      À placer dans le <head> ou juste avant </body>.
+
+     NOUVEAU EN 0.8.1 : la persistance de la conversation entre les écrans
+     (besoin des ERP en navigation pleine page) est intégrée au widget.
+     Elle s'active par `persistConversation` ci-dessous — plus besoin
+     d'adapter le fichier.
      ================================================================ -->
-<script src="https://stew-nocode.github.io/emmabot/emma-widget.js?v=0.8.0"></script>
+<script src="https://stew-nocode.github.io/emmabot/emma-widget.js?v=0.8.1"></script>
 
 <script>
   EmmaChat.init({
@@ -36,6 +41,15 @@
 
     // (SPA uniquement) Décommenter à la place de pageUrl si l'URL change sans rechargement.
     // getPageUrl: () => window.location.pathname + window.location.search,
+
+    // ── 0.8.1 : persistance de la conversation (ERP en navigation pleine page) ──
+    // À LAISSER ACTIVÉ si chaque écran de l'ERP recharge le document : sans cela,
+    // la conversation disparaîtrait à chaque clic de menu.
+    // L'échange est rangé dans localStorage sous une clé suffixée par le sessionId :
+    // il suit donc le sort de la session et disparaît avec elle. Aucun conflit avec
+    // sessionIdleTimeoutMs ci-dessous, les deux se complètent.
+    persistConversation: true,
+    persistPanelOpen: true,
 
     // Nouveau (0.8.0) : délai sans message après lequel la conversation repart de zéro.
     // Défaut 2 heures ; 0 = jamais.

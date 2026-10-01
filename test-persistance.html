@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Contrôle 0.8.1 — persistance et remise à zéro</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 24px; max-width: 760px; }
+  h1 { font-size: 18px; }
+  button { padding: 8px 12px; margin: 4px 4px 4px 0; cursor: pointer; }
+  pre { background: #f4f4f5; padding: 12px; border-radius: 6px; font-size: 12px; white-space: pre-wrap; }
+  .ok { color: #047857; font-weight: 600; }
+  .ko { color: #b91c1c; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<h1>Contrôle du widget 0.8.1</h1>
+<p>Page de test locale. Le webhook est simulé : aucun appel ne sort.</p>
+
+<p>
+  <button onclick="etat()">Lire l'état</button>
+  <button onclick="vieillir()">Vieillir la session de 3 h</button>
+  <button onclick="location.reload()">Recharger la page</button>
+  <button onclick="toutEffacer()">Tout effacer</button>
+</p>
+
+<pre id="sortie">—</pre>
+
+<script>
+  // ── Webhook simulé : on répond à la place de n8n, sans rien envoyer sur le réseau. ──
+  const vraiFetch = window.fetch.bind(window);
+  window.fetch = function (url, options) {
+    const cible = String(url || '');
+    if (cible.indexOf('webhook-de-test') !== -1) {
+      // Format réellement attendu par le widget : NDJSON, un fragment par ligne.
+      const corps =
+        JSON.stringify({ type: 'begin' }) + '\n' +
+        JSON.stringify({ type: 'item', content: 'Reponse simulee ' }) + '\n' +
+        JSON.stringify({ type: 'item', content: 'pour le controle 0.8.1.' }) + '\n' +
+        JSON.stringify({ type: 'end' }) + '\n';
+      return Promise.resolve(new Response(corps, {
+        status: 200,
+        headers: { 'Content-Type': 'application/x-ndjson; charset=utf-8' }
+      }));
+    }
+    return vraiFetch(url, options);
+  };
+
+  function cles() {
+    return Object.keys(localStorage).filter(function (k) { return k.indexOf('emma') === 0; });
+  }
+  function etat() {
+    const sid = localStorage.getItem('emma_chat_session_id:user:TEST');
+    const transcript = localStorage.getItem('emma_chat_transcript_v1:' + sid);
+    let nb = 0;
+    try { nb = JSON.parse(transcript || '[]').length; } catch (e) {}
+    document.getElementById('sortie').textContent =
+      'VERSION           : ' + (window.EmmaChat && window.EmmaChat.VERSION) + '\n' +
+      'sessionId         : ' + sid + '\n' +
+      'messages gardés   : ' + nb + '\n' +
+      'bulles à l\'écran  : ' + document.querySelectorAll('.emma-msg-user, .emma-msg-bot').length + '\n' +
+      'clés emma (' + cles().length + ')     :\n  ' + cles().join('\n  ');
+    return nb;
+  }
+  function vieillir() {
+    const k = 'emma_chat_session_id:user:TEST:activity';
+    localStorage.setItem(k, String(Date.now() - 3 * 60 * 60 * 1000));
+    document.getElementById('sortie').textContent =
+      'Dernière activité reculée de 3 h.\nRecharge la page : la conversation doit avoir disparu.';
+  }
+  function toutEffacer() {
+    cles().forEach(function (k) { localStorage.removeItem(k); });
+    location.reload();
+  }
+</script>
+
+<script src="emma-widget.js"></script>
+<script>
+  EmmaChat.init({
+    webhookUrl: 'https://exemple.invalid/webhook-de-test/chat',
+    webhookRoute: 'general',
+    userId: 'TEST',
+    // Les deux réglages repris du besoin ERP (navigation pleine page).
+    persistConversation: true,
+    persistPanelOpen: true,
+    // 2 h comme en production. Le bouton « Vieillir » simule le temps écoulé.
+    sessionIdleTimeoutMs: 2 * 60 * 60 * 1000,
+    satisfactionEnabled: false,
+    onNewConversation: function (evt) {
+      console.log('[test] nouvelle conversation :', evt.raison, evt.sessionId);
+    }
+  });
+</script>
+
+</body>
+</html>
