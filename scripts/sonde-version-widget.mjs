@@ -33,9 +33,10 @@ const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCES = [
   { nom: 'production OBC', url: 'https://onpointsunrise.com/Scripts/emma/emma-widget.js' },
   { nom: 'notre publication', url: 'https://widget.onnext-solution.com/emma/0.8.1/emma-widget.js' },
-  // GitHub Pages est l'ancienne voie de publication. Elle DOIT rester éteinte : elle sert le dépôt
-  // ENTIER, y compris index.html qui porte l'URL du webhook n8n. Si cette ligne rend une version,
-  // c'est que Pages a été réactivé et que le dépôt est de nouveau exposé.
+  // GitHub Pages est l'ancienne voie de publication. Elle ne publie que quatre fichiers et AUCUN
+  // secret (cf. .github/workflows/deploy-pages.yml), ce n'est donc pas un risque de sécurité.
+  // Mais tant qu'elle répond, DEUX adresses servent le widget, et une seconde source de vérité
+  // est précisément le problème que ce chantier supprime. Elle doit rester éteinte.
   { nom: 'ancienne voie (doit être morte)', url: 'https://stew-nocode.github.io/emmabot/emma-widget.js', doitEtreMorte: true }
 ];
 
@@ -100,8 +101,11 @@ if (process.argv.includes('--json')) {
   console.log(`  VERDICT : ${verdict}`);
   if (ressuscitee) {
     console.log('');
-    console.log('  GitHub Pages republie le dépôt ENTIER, index.html compris, qui porte');
-    console.log('  l\'URL du webhook n8n. À éteindre : Settings → Pages → Source : None.');
+    console.log('  Deux adresses servent le widget : laquelle fait foi ?');
+    console.log('  Ce n\'est pas un risque de sécurité (Pages ne publie que 4 fichiers, sans');
+    console.log('  secret), mais une seconde source de vérité est le problème qu\'on supprime.');
+    console.log('  À éteindre : retirer .github/workflows/deploy-pages.yml, puis');
+    console.log('  Settings → Pages → Source : None.');
   }
   if (diverge && prod?.version && nous?.version) {
     console.log('');
