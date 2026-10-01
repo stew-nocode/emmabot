@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Contrôle du loader — talon, file, rejeu et repli</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 24px; max-width: 820px; }
+  h1 { font-size: 18px; }
+  p.intro { color: #3f3f46; }
+  button { padding: 8px 12px; margin: 4px 4px 4px 0; cursor: pointer; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; margin-top: 12px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #e4e4e7; vertical-align: top; }
+  th { background: #fafafa; font-weight: 600; }
+  td.verdict { width: 112px; font-weight: 600; }
+  .ok { color: #047857; }
+  .ko { color: #b91c1c; }
+  .attente { color: #a16207; }
+  .neutre { color: #52525b; }
+  code { background: #f4f4f5; padding: 1px 4px; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<h1>Contrôle du chargeur de version (<code>loader.js</code>)</h1>
+<p class="intro">
+  Page de test locale. Le webhook est simulé, aucun appel ne sort vers n8n.<br>
+  Ce qui est vérifié : l'hôte appelle <code>EmmaChat.init()</code> <strong>avant</strong> que le
+  widget soit chargé — comme le fera OBC — et le chat doit tout de même s'ouvrir.
+</p>
+
+<p>
+  <button onclick="location.href='test-loader.html'">Parcours normal</button>
+  <button onclick="location.href='test-loader.html?casser-manifeste=1'">Manifeste injoignable (repli)</button>
+  <button onclick="toutEffacer()">Tout effacer</button>
+</p>
+
+<table>
+  <thead><tr><th>Contrôle</th><th class="verdict">Verdict</th><th>Mesure</th></tr></thead>
+  <tbody id="resultats"></tbody>
+</table>
+
+<script>
+  // ── Réglages du scénario ──
+  var VERSION_ATTENDUE = null;      // lue dans versions.json, sauf en mode repli
+  var MODE_REPLI = location.search.indexOf('casser-manifeste=1') !== -1;
+
+  // ── Webhook simulé, et sabotage optionnel du manifeste ──
+  // Le passe-plat est indispensable : le loader lit versions.json avec ce même fetch.
+  var vraiFetch = window.fetch.bind(window);
+  window.fetch = function (url, options) {
+    var cible = String(url || '');
+    if (cible.indexOf('webhook-de-test') !== -1) {
+      var corps =
+        JSON.stringify({ type: 'begin' }) + '\n' +
+        JSON.stringify({ type: 'item', content: 'Reponse simulee ' }) + '\n' +
+        JSON.stringify({ type: 'item', content: 'pour le controle du loader.' }) + '\n' +
+        JSON.stringify({ type: 'end' }) + '\n';
+      return Promise.resolve(new Response(corps, {
+        status: 200, headers: { 'Content-Type': 'application/x-ndjson; charset=utf-8' }
+      }));
+    }
+    if (MODE_REPLI && cible.indexOf('versions.json') !== -1) {
+      return Promise.reject(new Error('panne simulee du manifeste'));
+    }
+    return vraiFetch(url, options);
+  };
+
+  // ── Journal des contrôles ──
+  var lignes = [];
+  function noter(nom, verdict, mesure) {
+    lignes.push({ nom: nom, verdict: verdict, mesure: mesure });
+    var html = '';
+    for (var i = 0; i < lignes.length; i++) {
+      var l = lignes[i];
+      var classe = l.verdict === 'OK' ? 'ok'
+                 : l.verdict === 'ÉCHEC' ? 'ko'
+                 : l.verdict === '…' ? 'attente' : 'neutre';
+      html += '<tr><td>' + l.nom + '</td><td class="verdict ' + classe + '">' + l.verdict +
+              '</td><td><code>' + String(l.mesure).replace(/</g, '&lt;') + '</code></td></tr>';
+    }
+    document.getElementById('resultats').innerHTML = html;
+  }
+
+  function toutEffacer() {
+    Object.keys(localStorage).forEach(function (k) {
+      if (k.indexOf('emma') === 0) localStorage.removeItem(k);
+    });
+    location.reload();
+  }
+</script>
+
+<!-- La ligne unique que l'intégrateur posera. Tout ce qui suit s'exécute AVANT son chargement. -->
+<script src="public/emma/loader.js"></script>
+
+<script>
+  // ── 1. Qui est en place au moment où l'hôte parle ? ──
+  // Le talon n'est utile QUE si le widget n'est pas encore là. Quand le manifeste est en panne,
+  // le loader injecte sans attendre et le widget (souvent en cache) peut gagner la course : le
+  // talon est alors sans objet, pas en défaut. Un contrôle qui crierait « ÉCHEC » dans ce cas
+  // mentirait, et on corrigerait un code qui va bien.
+  var TALON_ACTIF = !!(window.EmmaChat && window.EmmaChat._talon === true);
+  var DEJA_CHARGE = !!(window.EmmaChat && typeof window.EmmaChat.VERSION === 'string');
+
+  if (TALON_ACTIF) {
+    noter('Talon posé avant le chargement', 'OK', 'EmmaChat._talon = true');
+    noter('Aucune version annoncée par le talon',
+          window.EmmaChat.VERSION === undefined ? 'OK' : 'ÉCHEC',
+          'EmmaChat.VERSION = ' + window.EmmaChat.VERSION);
+  } else if (DEJA_CHARGE) {
+    noter('Talon posé avant le chargement', 'SANS OBJET',
+          'le widget était déjà là (' + window.EmmaChat.VERSION + ') quand l\'hôte a appelé — ' +
+          'course gagnée par le chargement, voir la ligne « Chronologie » ci-dessous');
+  } else {
+    noter('Talon posé avant le chargement', 'ÉCHEC',
+          'ni talon ni widget : window.EmmaChat = ' + window.EmmaChat);
+  }
+
+  // ── 2. L'hôte appelle comme si le widget était déjà là ──
+  var T_HOTE = performance.now();
+  EmmaChat.init({
+    webhookUrl: 'https://exemple.invalid/webhook-de-test/chat',
+    webhookRoute: 'general',
+    userId: 'TEST-LOADER',
+    persistConversation: true,
+    persistPanelOpen: false,
+    satisfactionEnabled: false
+  });
+  EmmaChat.open();
+
+  if (TALON_ACTIF) {
+    noter('Les deux appels sont mis en file',
+          window.EmmaChat._file && window.EmmaChat._file.length === 2 ? 'OK' : 'ÉCHEC',
+          'file = [' + (window.EmmaChat._file || []).map(function (e) { return e[0]; }).join(', ') + ']');
+  } else {
+    noter('Les deux appels sont mis en file', 'SANS OBJET', 'reçus directement par le widget');
+  }
+
+  // ── 3. Puis on attend le vrai widget ──
+  noter('Widget chargé et file rejouée', '…', 'en attente');
+  noter('Le panneau est ouvert (open() rejoué)', '…', 'en attente');
+  noter('Version chargée', '…', 'en attente');
+
+  var depart = Date.now();
+  var attente = setInterval(function () {
+    var charge = window.EmmaChat && typeof window.EmmaChat.VERSION === 'string';
+    if (!charge && Date.now() - depart < 6000) return;
+    clearInterval(attente);
+
+    lignes.length = lignes.length - 3; // on remplace les trois lignes « en attente »
+
+    noter('Widget chargé et file rejouée',
+          charge && window.EmmaChat._talon === undefined ? 'OK' : 'ÉCHEC',
+          charge ? 'chargé en ' + (Date.now() - depart) + ' ms, _talon = ' + window.EmmaChat._talon
+                 : 'toujours absent après 6 s');
+
+    // `open()` ajoute la classe `open` sur #emma-widget (cf. emma-widget.js). On mesure AUSSI la
+    // hauteur réelle : une classe posée sur un panneau resté plat ne prouverait rien.
+    var panneau = document.getElementById('emma-widget');
+    var ouvert = !!(panneau && panneau.classList.contains('open') && panneau.offsetHeight > 0);
+    noter('Le panneau est ouvert (open() rejoué)', ouvert ? 'OK' : 'ÉCHEC',
+          panneau ? 'classe open = ' + panneau.classList.contains('open') +
+                    ', hauteur = ' + panneau.offsetHeight + ' px'
+                  : '#emma-widget introuvable dans le DOM');
+
+    var balise = document.querySelector('script[data-emma-version]');
+    var injectee = balise ? balise.getAttribute('data-emma-version') : null;
+    noter('Version chargée',
+          charge && injectee && injectee === window.EmmaChat.VERSION ? 'OK' : 'ÉCHEC',
+          'EmmaChat.VERSION = ' + (window.EmmaChat && window.EmmaChat.VERSION) +
+          ' · balise injectée = ' + (injectee || 'aucune'));
+
+    // ── Chronologie mesurée, pas supposée ──
+    // Elle explique les « SANS OBJET » : si le widget est arrivé avant l'appel de l'hôte, c'est
+    // une course gagnée, pas un talon défaillant.
+    var piste = performance.getEntriesByType('resource').filter(function (r) {
+      return r.name.indexOf('emma-widget.js') !== -1;
+    })[0];
+    noter('Chronologie (widget vs appel de l\'hôte)', 'MESURE',
+          'widget disponible à ' + (piste ? Math.round(piste.responseEnd) + ' ms' : 'hors cache navigateur') +
+          ' · l\'hôte a appelé init() à ' + Math.round(T_HOTE) + ' ms' +
+          ' · ' + (piste && piste.responseEnd < T_HOTE ? 'le widget a gagné → talon sans objet'
+                                                       : 'l\'hôte a parlé en premier → talon indispensable'));
+
+    // ── En mode repli : la version chargée doit être CELLE ÉCRITE DANS LE LOADER ──
+    if (MODE_REPLI) {
+      noter('Repli : version écrite en dur dans le loader', '…', 'lecture du fichier publié');
+      vraiFetch('public/emma/loader.js', { cache: 'no-store' })
+        .then(function (r) { return r.text(); })
+        .then(function (src) {
+          var m = /VERSION_DE_REPLI\s*=\s*'([^']+)'/.exec(src);
+          var repli = m ? m[1] : null;
+          lignes.length = lignes.length - 1;
+          noter('Repli : version écrite en dur dans le loader',
+                repli && repli === injectee ? 'OK' : 'ÉCHEC',
+                'repli du loader = ' + repli + ' · version injectée = ' + injectee +
+                (repli === '@@VERSION_DE_REPLI@@' ? ' · marqueur NON REMPLACÉ à la publication' : ''));
+        });
+    }
+  }, 50);
+</script>
+
+</body>
+</html>

@@ -12,6 +12,11 @@
  *    d'où le numéro lu dans la source et non saisi à la main. Pas de `latest` : une adresse qui
  *    change sous les pieds de l'intégrateur est exactement ce qu'on cherche à supprimer.
  *
+ * Un seul fichier échappe à la règle 2 : `loader.js`, déposé à la racine de `emma/`. C'est le
+ * point d'entrée que l'intégrateur pose une fois pour toutes ; il lit `versions.json` et charge
+ * la version courante. Sa version de repli est injectée ici, à la publication, pour qu'elle ne
+ * puisse pas vieillir en silence derrière la version réellement en ligne.
+ *
  * Lancé automatiquement par Vercel (cf. `vercel.json`), ou à la main pour vérifier :
  *   node scripts/preparer-publication.mjs
  */
@@ -41,11 +46,28 @@ for (const fichier of A_PUBLIER) {
   await copyFile(join(RACINE, fichier), join(dossier, fichier));
 }
 
-// Repère de version, pratique pour une sonde ou un contrôle à la main.
+// Repère de version, lu par `loader.js` à chaque chargement et par la sonde de version.
 await writeFile(
   join(SORTIE, 'emma', 'versions.json'),
   JSON.stringify({ courante: version, publieLe: new Date().toISOString() }, null, 2)
 );
 
+// ── Le chargeur, avec sa version de repli ──
+// Le remplacement est VÉRIFIÉ : un loader publié avec le marqueur intact chargerait une version
+// inexistante dès que `versions.json` devient injoignable, soit exactement la panne qu'il est
+// censé absorber. Mieux vaut interrompre la publication que livrer ce repli-là.
+const MARQUEUR_REPLI = '@@VERSION_DE_REPLI@@';
+const loaderSource = await readFile(join(RACINE, 'loader.js'), 'utf8');
+if (!loaderSource.includes(MARQUEUR_REPLI)) {
+  console.error(`${MARQUEUR_REPLI} introuvable dans loader.js — publication interrompue.`);
+  process.exit(1);
+}
+await writeFile(
+  join(SORTIE, 'emma', 'loader.js'),
+  loaderSource.split(MARQUEUR_REPLI).join(version)
+);
+
 console.log(`Publication préparée : /emma/${version}/`);
 A_PUBLIER.forEach((f) => console.log(`  - ${f}`));
+console.log('  - emma/versions.json');
+console.log(`  - emma/loader.js (repli : ${version})`);
