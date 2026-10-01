@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<title>Contrôle 0.8.1 — persistance et remise à zéro</title>
+<title>Contrôle — persistance de la conversation et remise à zéro</title>
 <style>
   body { font-family: system-ui, sans-serif; margin: 24px; max-width: 760px; }
   h1 { font-size: 18px; }
@@ -14,8 +14,14 @@
 </head>
 <body>
 
-<h1>Contrôle du widget 0.8.1</h1>
-<p>Page de test locale. Le webhook est simulé : aucun appel ne sort.</p>
+<h1>Contrôle du widget — persistance et remise à zéro</h1>
+<p>
+  Page de test locale. Le webhook est simulé : aucun appel ne sort.<br>
+  La version réellement chargée s'affiche dans « Lire l'état » — ne pas l'écrire ici, elle
+  mentirait à la montée suivante.<br>
+  <strong>Écrire la question puis valider avec la touche Entrée</strong> : le widget écoute la
+  touche, pas l'événement <code>submit</code> du formulaire.
+</p>
 
 <p>
   <button onclick="etat()">Lire l'état</button>
@@ -36,7 +42,7 @@
       const corps =
         JSON.stringify({ type: 'begin' }) + '\n' +
         JSON.stringify({ type: 'item', content: 'Reponse simulee ' }) + '\n' +
-        JSON.stringify({ type: 'item', content: 'pour le controle 0.8.1.' }) + '\n' +
+        JSON.stringify({ type: 'item', content: 'pour le controle de la persistance.' }) + '\n' +
         JSON.stringify({ type: 'end' }) + '\n';
       return Promise.resolve(new Response(corps, {
         status: 200,

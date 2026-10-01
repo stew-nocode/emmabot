@@ -44,11 +44,38 @@ Les en-têtes HTTP ne sont en général **pas** disponibles dans `$json.headers`
 - `const got = ($json.headers?.['x-emma-secret'] || $json.headers?.['X-Emma-Secret'] || $json.emmaSecret);`
 - Compare `got` à la valeur attendue comme avant.
 
-## Publication GitHub Pages (widget uniquement)
+## Publication (widget uniquement)
 
-Le workflow `.github/workflows/deploy-pages.yml` publie à chaque push sur `main` : `emma-widget.js`, `emma-avatar.png`, `EMBED_SNIPPET.html` et ce README. OBC charge le widget depuis `https://stew-nocode.github.io/emmabot/emma-widget.js`.
+Le widget est servi depuis **`https://widget.onnext-solution.com`** (Vercel, projet `emmabot`),
+qui est la **seule** source de vérité. `scripts/preparer-publication.mjs` ne met en ligne que
+`emma-widget.js`, `emma-avatar.png`, `versions.json` et `loader.js` : tout le reste du dépôt
+répond 404. Toute addition à la liste `A_PUBLIER` est une décision de publication.
 
-**Aucun secret n'est publié.** Jusqu'au 14/09/2026, le site publiait aussi la page de test `index.html` et un `local.config.js` généré depuis le secret GitHub `EMMA_SECRET` : le secret en service du chat était lisible par tous. La page de test se lance désormais uniquement en local (voir « Démo locale » plus haut) et le workflow n'utilise plus `EMMA_SECRET`.
+Deux adresses, deux usages :
+
+| Adresse | Cache | Pour qui |
+|---|---|---|
+| `/emma/loader.js` | 5 min | **Recommandée.** Posée une fois, elle charge la version courante — nos correctifs arrivent sans retouche chez l'intégrateur. |
+| `/emma/<version>/emma-widget.js` | immuable, 1 an | Pour qui veut garder la main sur la version. Jamais réécrite. |
+
+Il n'y a pas de `latest` : une adresse qui change sous les pieds de l'intégrateur est exactement
+ce qu'on cherche à supprimer. Le chargeur répond au besoin de mise à jour automatique, et
+`/emma/versions.json` (cache 60 s) dit quelle version il sert.
+
+**GitHub Pages est dépublié** (le workflow `deploy-pages.yml` a été retiré, la source mise à
+`None`). Le motif est **l'unicité de la source** : tant que deux adresses servaient le widget,
+personne ne savait laquelle faisait foi. Ce n'était pas un risque de sécurité — le workflow ne
+copiait que quatre fichiers et aucun secret.
+
+**Aucun secret n'est publié.** Jusqu'au 14/09/2026, Pages publiait aussi la page de test
+`index.html` et un `local.config.js` généré depuis le secret GitHub `EMMA_SECRET` : le secret en
+service du chat était lisible par tous. La page de test se lance désormais uniquement en local
+(voir « Démo locale » plus haut).
+
+**Surveillance.** `node scripts/sonde-version-widget.mjs` compare ce que sert OBC, ce que nous
+publions (version lue dans `versions.json`, pas écrite en dur) et ce dépôt ; elle contrôle aussi
+que le repli inscrit dans le chargeur publié correspond bien à la version courante. Code de
+retour non nul en cas d'écart — à brancher sur un ordonnanceur.
 
 **Limite importante** : un widget navigateur ne peut pas garder de secret. Celui qu'OBC transmet reste lisible dans les outils de développement de chaque utilisateur. La protection du chat se fait côté n8n (validation, limitation du nombre de messages), ou plus tard par un proxy serveur côté OBC.
 

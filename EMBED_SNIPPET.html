@@ -1,19 +1,43 @@
 <!-- ================================================================
-     EMMA WIDGET 0.8.1 — Snippet d'intégration ERP
+     EMMA WIDGET 0.8.2 — Snippet d'intégration ERP
      À placer dans le <head> ou juste avant </body>.
 
-     NOUVEAU EN 0.8.1 : la persistance de la conversation entre les écrans
-     (besoin des ERP en navigation pleine page) est intégrée au widget.
-     Elle s'active par `persistConversation` ci-dessous — plus besoin
-     d'adapter le fichier.
+     0.8.1 : la persistance de la conversation entre les écrans (besoin
+     des ERP en navigation pleine page) est intégrée au widget. Elle
+     s'active par `persistConversation` ci-dessous.
+
+     0.8.2 : le CHARGEUR DE VERSION. Une ligne posée une fois, et les
+     correctifs arrivent sans retouche chez l'intégrateur.
      ================================================================ -->
-<script src="https://widget.onnext-solution.com/emma/0.8.1/emma-widget.js"></script>
+
+<!-- ─────────────────────────────────────────────────────────────────
+     OPTION A — RECOMMANDÉE : le chargeur.
+     Il lit la version courante que nous publions et charge le widget
+     correspondant. Posé une fois, plus jamais retouché : nos correctifs
+     vous parviennent sans ticket ni déploiement de votre côté.
+     Si notre serveur de versions est indisponible, il charge une
+     version de secours — le chat ne s'éteint pas.
+     ───────────────────────────────────────────────────────────────── -->
+<script src="https://widget.onnext-solution.com/emma/loader.js"></script>
+
+<!-- ─────────────────────────────────────────────────────────────────
+     OPTION B — pour qui veut garder la main sur la version.
+     Adresse figée, jamais réécrite : ce fichier ne changera pas. En
+     contrepartie, chaque mise à jour demande de modifier cette ligne.
+     Utiliser l'une OU l'autre, jamais les deux.
+
+     <script src="https://widget.onnext-solution.com/emma/0.8.2/emma-widget.js"></script>
+     ───────────────────────────────────────────────────────────────── -->
 
 <script>
+  // Avec le chargeur, cet appel peut rester ICI, juste après la balise : le widget arrive
+  // quelques dizaines de millisecondes plus tard et rejoue les appels reçus entre-temps.
+  // Rien à décaler, rien à envelopper dans un window.onload.
   EmmaChat.init({
 
     // Avatar (optionnel) : par défaut emma-avatar.png est résolu depuis l’URL d’emma-widget.js (OK cross-domain ERP).
-    // logoUrl: "https://widget.onnext-solution.com/emma/0.8.1/emma-avatar.png",
+    // Avec le chargeur, laisser cette ligne commentée : l'avatar suit automatiquement la version chargée.
+    // logoUrl: "https://widget.onnext-solution.com/emma/0.8.2/emma-avatar.png",
 
     // URL du webhook n8n qui reçoit les messages du chatbot.
     webhookUrl: "VOTRE_URL_WEBHOOK_N8N",
