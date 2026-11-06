@@ -1,0 +1,27 @@
+# Vérifie chaque nuit que la page OBC charge bien la version publiée du widget.
+# La sonde sort avec un code non nul en cas d'écart ou de mesure absente : le passage échoue
+# et GitHub prévient par email.
+name: Sonde du widget Emma
+
+on:
+  schedule:
+    - cron: '17 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sonde:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Mesurer les versions
+        run: node scripts/sonde-version-widget.mjs
+        env:
+          OBC_SONDE_EMAIL: ${{ secrets.OBC_SONDE_EMAIL }}
+          OBC_SONDE_MOT_DE_PASSE: ${{ secrets.OBC_SONDE_MOT_DE_PASSE }}
