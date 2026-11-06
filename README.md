@@ -72,10 +72,15 @@ copiait que quatre fichiers et aucun secret.
 service du chat était lisible par tous. La page de test se lance désormais uniquement en local
 (voir « Démo locale » plus haut).
 
-**Surveillance.** `node scripts/sonde-version-widget.mjs` compare ce que sert OBC, ce que nous
-publions (version lue dans `versions.json`, pas écrite en dur) et ce dépôt ; elle contrôle aussi
-que le repli inscrit dans le chargeur publié correspond bien à la version courante. Code de
-retour non nul en cas d'écart — à brancher sur un ordonnanceur.
+**Surveillance.** `node scripts/sonde-version-widget.mjs` compare ce que charge une page OBC
+connectée, ce que nous publions (version lue dans `versions.json`, pas écrite en dur) et ce dépôt ;
+elle contrôle aussi que le repli inscrit dans le chargeur publié correspond bien à la version
+courante. Code de retour non nul en cas d'écart — à brancher sur un ordonnanceur.
+
+Emma n'apparaît qu'une fois connecté : la mesure d'OBC lit `OBC_SONDE_EMAIL` et
+`OBC_SONDE_MOT_DE_PASSE` dans l'environnement. Sans elles, le verdict est `OBC NON MESURÉ`
+(code 2). Ne pas revenir à la lecture de `/Scripts/emma/emma-widget.js` : ce fichier `0.7.5-obc2`
+existe encore chez OBC, mais la page d'accueil connectée ne le charge plus.
 
 **Limite importante** : un widget navigateur ne peut pas garder de secret. Celui qu'OBC transmet reste lisible dans les outils de développement de chaque utilisateur. La protection du chat se fait côté n8n (validation, limitation du nombre de messages), ou plus tard par un proxy serveur côté OBC.
 

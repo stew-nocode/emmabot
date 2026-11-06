@@ -5,11 +5,16 @@
  *
  * Le 14/09/2026 nous avons publié la 0.8.0, qui remet la conversation à zéro après 2 h
  * d'inactivité. Le 30/09, soit SEIZE JOURS plus tard, la production servait encore
- * `0.7.5-obc2` : OBC héberge sa propre copie du widget, et nos livraisons ne l'atteignent
+ * `0.7.5-obc2` : OBC hébergeait sa propre copie du widget, et nos livraisons ne l'atteignaient
  * jamais toutes seules. Personne ne l'a vu, parce que rien ne regardait.
  *
+ * Depuis, OBC pose notre chargeur. La copie `/Scripts/emma/emma-widget.js` existe toujours sur
+ * son serveur, mais la page d'accueil connectée ne la charge plus : lire ce fichier mesurerait
+ * un fichier mort et annoncerait une fausse divergence (constaté le 06/11/2026). La sonde lit
+ * donc la balise `<script>` d'une page connectée, c'est-à-dire ce que le navigateur charge.
+ *
  * Cette sonde regarde. Elle compare trois versions :
- *   - celle que sert OBC en production   (la seule qui compte pour l'utilisateur)
+ *   - celle que charge une page OBC      (la seule qui compte pour l'utilisateur)
  *   - celle que nous publions            (ce qu'on croit avoir livré)
  *   - celle de ce dépôt                  (ce qu'on vient d'écrire)
  *
@@ -21,7 +26,13 @@
  * Code de retour 0 si tout concorde, 1 s'il y a divergence, 2 si une source est injoignable.
  * À brancher sur n'importe quel ordonnanceur : le code de retour suffit à déclencher l'alerte.
  *
- * Aucune dépendance, aucun secret : les deux fichiers distants sont publics.
+ * Emma n'apparaît qu'une fois connecté : la mesure d'OBC demande un compte, passé par
+ * l'environnement et jamais écrit dans ce dépôt.
+ *
+ *   OBC_SONDE_EMAIL=...  OBC_SONDE_MOT_DE_PASSE=...  node scripts/sonde-version-widget.mjs
+ *
+ * Sans ces variables, le verdict est OBC NON MESURÉ (code 2) : une mesure absente ne doit jamais
+ * se lire comme un calme. Aucune dépendance.
  */
 
 import { readFile } from 'node:fs/promises';
@@ -31,6 +42,8 @@ import { dirname, join } from 'node:path';
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 const BASE_PUBLICATION = 'https://widget.onnext-solution.com/emma/';
+const OBC = 'https://onpointsunrise.com';
+const NOM_OBC = 'production OBC';
 
 /**
  * Version annoncée par le manifeste, c'est-à-dire celle que `loader.js` fera charger.
@@ -49,7 +62,6 @@ async function versionCourantePubliee() {
 }
 
 const SOURCES = [
-  { nom: 'production OBC', url: 'https://onpointsunrise.com/Scripts/emma/emma-widget.js' },
   // GitHub Pages est l'ancienne voie de publication. Elle ne publie que quatre fichiers et AUCUN
   // secret (cf. .github/workflows/deploy-pages.yml), ce n'est donc pas un risque de sécurité.
   // Mais tant qu'elle répond, DEUX adresses servent le widget, et une seconde source de vérité
@@ -77,6 +89,79 @@ async function versionDistante({ nom, url }) {
     return version ? { nom, url, version } : { nom, url, erreur: 'version introuvable dans le fichier' };
   } catch (e) {
     return { nom, url, erreur: e?.name === 'TimeoutError' ? `pas de réponse en ${DELAI_MS / 1000} s` : String(e?.message || e) };
+  }
+}
+
+/** Suit les redirections à la main : `fetch` ne garderait pas les cookies posés en chemin. */
+async function requeteObc(url, bocal, options = {}) {
+  let adresse = url;
+  let init = options;
+  for (let saut = 0; saut < 6; saut++) {
+    const reponse = await fetch(adresse, {
+      ...init,
+      redirect: 'manual',
+      cache: 'no-store',
+      signal: AbortSignal.timeout(DELAI_MS),
+      headers: { ...init.headers, cookie: [...bocal].map(([cle, valeur]) => `${cle}=${valeur}`).join('; ') }
+    });
+    for (const cookie of reponse.headers.getSetCookie()) {
+      const paire = cookie.split(';')[0];
+      const egal = paire.indexOf('=');
+      bocal.set(paire.slice(0, egal), paire.slice(egal + 1));
+    }
+    const suite = reponse.headers.get('location');
+    if (reponse.status < 300 || reponse.status >= 400 || !suite) return reponse;
+    await reponse.body?.cancel();
+    adresse = new URL(suite, adresse).href;
+    init = {};
+  }
+  throw new Error('trop de redirections');
+}
+
+/** Déduit la version de la balise Emma d'une page : chargeur, adresse figée ou copie locale. */
+async function versionDepuisPage(page, courante) {
+  const balises = [...page.matchAll(/<script[^>]+src="([^"]*emma[^"]*)"/gi)].map((m) => m[1]);
+  if (!balises.length) return { nom: NOM_OBC, erreur: 'aucun script Emma dans la page' };
+
+  const url = new URL(balises[0], OBC).href;
+  if (url.split('?')[0] === `${BASE_PUBLICATION}loader.js`) {
+    // Le chargeur sert par construction la version courante ; sa santé est contrôlée à part.
+    return courante
+      ? { nom: NOM_OBC, url, version: courante, voie: 'chargeur' }
+      : { nom: NOM_OBC, url, erreur: 'chargeur présent, version courante inconnue' };
+  }
+  const figee = url.startsWith(BASE_PUBLICATION) && /\/emma\/([^/]+)\/emma-widget\.js/.exec(url);
+  if (figee) return { nom: NOM_OBC, url, version: figee[1], voie: 'adresse figée' };
+  return { ...(await versionDistante({ nom: NOM_OBC, url })), voie: 'copie locale' };
+}
+
+async function versionObc(courante) {
+  const email = process.env.OBC_SONDE_EMAIL;
+  const motDePasse = process.env.OBC_SONDE_MOT_DE_PASSE;
+  if (!email || !motDePasse) {
+    return { nom: NOM_OBC, nonMesure: true, erreur: 'OBC_SONDE_EMAIL et OBC_SONDE_MOT_DE_PASSE absents' };
+  }
+  try {
+    const bocal = new Map();
+    const connexion = await (await requeteObc(`${OBC}/Account/Login`, bocal)).text();
+    const jeton = /name="__RequestVerificationToken"[^>]*value="([^"]+)"/.exec(connexion)?.[1];
+    if (!jeton) return { nom: NOM_OBC, erreur: 'jeton de connexion introuvable' };
+
+    const reponse = await requeteObc(`${OBC}/`, bocal, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', referer: `${OBC}/Account/Login` },
+      body: new URLSearchParams({
+        __RequestVerificationToken: jeton,
+        Email: email,
+        Password: motDePasse,
+        RememberMe: 'false'
+      })
+    });
+    const page = await reponse.text();
+    if (page.includes('id="AccountLogin"')) return { nom: NOM_OBC, erreur: 'connexion refusée' };
+    return await versionDepuisPage(page, courante);
+  } catch (e) {
+    return { nom: NOM_OBC, erreur: e?.name === 'TimeoutError' ? `pas de réponse en ${DELAI_MS / 1000} s` : String(e?.message || e) };
   }
 }
 
@@ -128,6 +213,7 @@ try {
 }
 
 const resultats = [
+  await versionObc(courante),
   ...(await Promise.all(SOURCES.map(versionDistante))),
   publication,
   await versionLocale()
@@ -142,7 +228,7 @@ const enErreur = aComparer.filter((r) => r.erreur);
 const versions = new Set(aComparer.filter((r) => r.version).map((r) => r.version));
 const diverge = versions.size > 1;
 
-const prod = resultats.find((r) => r.nom === 'production OBC');
+const prod = resultats.find((r) => r.nom === NOM_OBC);
 const nous = resultats.find((r) => r.nom === 'notre publication');
 
 const chargeurDesaccorde = !!(chargeur && !chargeur.erreur && chargeur.accorde === false);
@@ -155,6 +241,7 @@ const chargeurInjoignable = !!(chargeur && chargeur.erreur);
 const verdict = ressuscitee ? 'ANCIENNE VOIE RÉACTIVÉE'
   : chargeurDesaccorde ? 'CHARGEUR DÉSACCORDÉ'
   : diverge ? 'DIVERGENCE'
+  : prod?.nonMesure ? 'OBC NON MESURÉ'
   : enErreur.length || chargeurInjoignable ? 'INJOIGNABLE'
   : 'CONCORDE';
 const code = ressuscitee || diverge || chargeurDesaccorde ? 1 : enErreur.length || chargeurInjoignable ? 2 : 0;
@@ -165,7 +252,8 @@ if (process.argv.includes('--json')) {
   console.log('Sonde de version du widget Emma — ' + new Date().toLocaleString('fr-FR'));
   console.log('');
   for (const r of resultats) {
-    console.log(`  ${r.nom.padEnd(20)} ${r.version ? r.version : 'ÉCHEC : ' + r.erreur}`);
+    const mesure = r.version ? r.version + (r.voie ? ` (${r.voie})` : '') : (r.nonMesure ? 'NON MESURÉ : ' : 'ÉCHEC : ') + r.erreur;
+    console.log(`  ${r.nom.padEnd(20)} ${mesure}`);
   }
   console.log('');
   console.log(`  chargeur (repli)     ${chargeur ? (chargeur.erreur ? 'ÉCHEC : ' + chargeur.erreur : chargeur.repli) : 'non mesuré'}`);
@@ -189,7 +277,7 @@ if (process.argv.includes('--json')) {
   }
   if (diverge && prod?.version && nous?.version) {
     console.log('');
-    console.log(`  La production sert ${prod.version}, nous publions ${nous.version}.`);
+    console.log(`  La page OBC charge ${prod.version} (${prod.voie}), nous publions ${nous.version}.`);
     console.log('  Nos correctifs ne parviennent pas aux utilisateurs. Voir');
     console.log('  docs/chantiers/dev-onnext/plan-widget-emma-source-unique-20261001.md (dépôt OnpointDoc).');
   }
