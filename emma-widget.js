@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  const EMMA_WIDGET_VERSION = '0.8.3';
+  const EMMA_WIDGET_VERSION = '0.8.4';
 
   // ── Already loaded guard ──
   // Nuance introduite en 0.8.2 : `loader.js` pose un TALON sur window.EmmaChat avant nous, pour
@@ -1025,11 +1025,25 @@
       } catch (_) {}
       return true;
     }
+    /**
+     * Une fenêtre de l'ERP est-elle VRAIMENT à l'écran ? La classe ne suffit pas : dans OBC,
+     * AddGeneralMajModal et AddOtherFormModal gardent `.in` en permanence tout en étant cachées
+     * (constaté le 26/11/2026). En 0.8.3, elles mettaient battement et invitation en pause à vie.
+     */
+    function fenetreErpOuverte() {
+      if (document.body.classList.contains('modal-open')) return true;
+      const candidates = document.querySelectorAll('.modal.in, .modal.show, .swal2-container, .sweet-alert.showSweetAlert');
+      for (let i = 0; i < candidates.length; i++) {
+        const el = candidates[i];
+        const style = getComputedStyle(el);
+        if (style.display !== 'none' && style.visibility !== 'hidden' && el.getClientRects().length) return true;
+      }
+      return false;
+    }
     /** L'utilisateur est occupé : fenêtre de l'ERP ouverte, saisie en cours, onglet caché. */
     function pageOccupee() {
       if (document.hidden || widget.classList.contains('open')) return true;
-      if (document.body.classList.contains('modal-open')) return true;
-      if (document.querySelector('.modal.in, .modal.show, .swal2-container, .sweet-alert.showSweetAlert')) return true;
+      if (fenetreErpOuverte()) return true;
       const actif = document.activeElement;
       if (actif && (/^(INPUT|TEXTAREA|SELECT)$/.test(actif.tagName) || actif.isContentEditable)) return true;
       return false;
@@ -1046,6 +1060,15 @@
       launcher.classList.add('emma-attention');
       setTimeout(function () { launcher.classList.remove('emma-attention'); }, 7000);
       bulleMinuteur = setTimeout(function () { if (bulleMode === 'invitation') cacherBulle(); }, 9000);
+      // Une fenêtre de l'ERP s'ouvre pendant l'invitation : on se retire aussitôt.
+      const veille = setInterval(function () {
+        if (bulleMode !== 'invitation') { clearInterval(veille); return; }
+        if (fenetreErpOuverte()) {
+          cacherBulle();
+          launcher.classList.remove('emma-attention');
+          clearInterval(veille);
+        }
+      }, 500);
     }
 
     launcher.addEventListener('mouseenter', function () {
@@ -1965,9 +1988,7 @@
           clearInterval(minuteurBattement);
           return;
         }
-        const enPause = widget.classList.contains('open') ||
-          document.body.classList.contains('modal-open') ||
-          !!document.querySelector('.modal.in, .modal.show, .swal2-container, .sweet-alert.showSweetAlert');
+        const enPause = widget.classList.contains('open') || fenetreErpOuverte();
         launcher.classList.toggle('emma-battement', !enPause);
       };
       const minuteurBattement = setInterval(majBattement, 2000);
