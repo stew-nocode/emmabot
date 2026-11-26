@@ -1,5 +1,5 @@
 <!-- ================================================================
-     EMMA WIDGET 0.8.2 — Snippet d'intégration ERP
+     EMMA WIDGET 0.8.3 — Snippet d'intégration ERP
      À placer dans le <head> ou juste avant </body>.
 
      0.8.1 : la persistance de la conversation entre les écrans (besoin
@@ -8,6 +8,14 @@
 
      0.8.2 : le CHARGEUR DE VERSION. Une ligne posée une fois, et les
      correctifs arrivent sans retouche chez l'intégrateur.
+
+     0.8.3 : `offsetBottom` et `offsetSide` déplacent le bouton (et la
+     fenêtre de discussion avec lui), pour qu'il ne couvre pas les
+     boutons du bas des fenêtres de l'ERP. Bouton modernisé : icône
+     bulle + étincelle (`launcherIcon`), libellé au survol
+     (`hoverLabel`), invitation une fois par session (`teaserText`,
+     `teaserDelayMs`) et battement doux (`ambientPulse`) réservé à qui
+     n'a pas ouvert Emma depuis 7 jours. Rien à régler côté ERP.
      ================================================================ -->
 
 <!-- ─────────────────────────────────────────────────────────────────
@@ -21,12 +29,13 @@
 
 <!-- ─────────────────────────────────────────────────────────────────
      REPRENDRE LA MAIN SUR LA VERSION, si jamais c'est nécessaire.
-     Chaque version garde une adresse figée, jamais réécrite. Remplacer
-     la ligne ci-dessus par celle-ci fige le widget pour de bon — et
+     Remplacer la ligne ci-dessus par celle-ci fige le widget — et
      chaque mise à jour redevient alors une intervention manuelle.
+     Attention : seule la version courante reste en ligne. Une adresse
+     figée cesse de répondre à la publication suivante.
      Utiliser l'une OU l'autre, jamais les deux.
 
-     <script src="https://widget.onnext-solution.com/emma/0.8.2/emma-widget.js"></script>
+     <script src="https://widget.onnext-solution.com/emma/0.8.3/emma-widget.js"></script>
      ───────────────────────────────────────────────────────────────── -->
 
 <script>
@@ -37,7 +46,12 @@
 
     // Avatar (optionnel) : par défaut emma-avatar.png est résolu depuis l’URL d’emma-widget.js (OK cross-domain ERP).
     // Avec le chargeur, laisser cette ligne commentée : l'avatar suit automatiquement la version chargée.
-    // logoUrl: "https://widget.onnext-solution.com/emma/0.8.2/emma-avatar.png",
+    // logoUrl: "https://widget.onnext-solution.com/emma/0.8.3/emma-avatar.png",
+
+    // Nouveau (0.8.3) : distance en px entre le bouton et le bas de l'écran. Défaut 84, au-dessus
+    // de la barre de boutons des fenêtres OBC (70 px) : rien à régler pour OBC.
+    // offsetSide règle de même la distance au bord droit (ou gauche avec position: "left").
+    // offsetBottom: 84,
 
     // URL du webhook n8n qui reçoit les messages du chatbot.
     webhookUrl: "VOTRE_URL_WEBHOOK_N8N",

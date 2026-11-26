@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  const EMMA_WIDGET_VERSION = '0.8.2';
+  const EMMA_WIDGET_VERSION = '0.8.3';
 
   // ── Already loaded guard ──
   // Nuance introduite en 0.8.2 : `loader.js` pose un TALON sur window.EmmaChat avant nous, pour
@@ -77,6 +77,26 @@
     typingLabel: 'En train d\'écrire…',
     suggestions: [],
     position: 'right',       // 'right' | 'left'
+    // Distance (px) entre le bouton et le bas / le bord de l'écran. Depuis 0.8.3, 84 par défaut :
+    // la barre de boutons des fenêtres OBC occupe les 70 px du bas (mesuré le 26/11/2026), et
+    // à 28 le bouton couvrait « Oui » / « Non ». Réglé ici, chez nous, pour qu'OBC n'ait rien à
+    // retoucher. La fenêtre de discussion suit le bouton.
+    offsetBottom: 84,
+    offsetSide: 28,
+    // Invitation discrète (0.8.3) : une fois par session de navigateur, après teaserDelayMs, une
+    // bulle courte apparaît à côté du bouton et le bouton pulse 3 fois, puis tout s'arrête (9 s).
+    // Jamais si une fenêtre de l'ERP est ouverte, pendant une saisie, ni pour qui a ouvert Emma
+    // ces 7 derniers jours : on vise ceux qui ne la connaissent pas encore. 0 = désactivée.
+    teaserDelayMs: 8000,
+    teaserText: 'Une question sur OBC ? Demandez à Emma.',
+    // Libellé qui glisse à côté du bouton au survol ('' = aucun).
+    hoverLabel: 'Demander à Emma',
+    // Icône du bouton : 'bulle' | 'etincelles' | 'bulle-etincelle' | 'aide' | 'initiale'.
+    launcherIcon: 'bulle-etincelle',
+    // Battement continu du bouton (lueur + onde lente). Garde-fous : seulement pour qui n'a pas
+    // ouvert Emma depuis 7 jours, suspendu quand une fenêtre de l'ERP ou le chat est ouvert,
+    // coupé si l'utilisateur a demandé moins d'animations dans son système.
+    ambientPulse: true,
     primaryColor: '#2563EB',
     launcherSize: 62,
     widgetWidth: 380,
@@ -336,28 +356,107 @@
     return fresh;
   }
 
+  // ── Icônes du bouton (0.8.3) ──
+  // Écrites ici, jamais reçues de l'hôte : launcherIcon ne choisit qu'une clé de cette table.
+  const ICONES_BOUTON = {
+    bulle: `<svg class="emma-icon-chat" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
+    etincelles: `<svg class="emma-icon-chat" width="28" height="28" viewBox="0 0 24 24" fill="#fff">
+        <path d="M11 3.5l1.7 4.6 4.6 1.7-4.6 1.7L11 16.1l-1.7-4.6-4.6-1.7 4.6-1.7z"/>
+        <path d="M18 13.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" opacity=".85"/>
+        <path d="M5.5 15.5l.5 1.3 1.3.5-1.3.5-.5 1.3-.5-1.3-1.3-.5 1.3-.5z" opacity=".7"/></svg>`,
+    'bulle-etincelle': `<svg class="emma-icon-chat" width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        <path d="M12 6.6l1 2.4 2.4 1-2.4 1-1 2.4-1-2.4-2.4-1 2.4-1z" fill="#fff" stroke="none"/></svg>`,
+    aide: `<svg class="emma-icon-chat" width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        <path d="M9.8 8.4a2.3 2.3 0 1 1 3.1 2.2c-.6.2-.9.7-.9 1.3"/><circle cx="12" cy="14.4" r=".5" fill="#fff"/></svg>`,
+    initiale: `<span class="emma-icon-chat" style="color:#fff;font:700 26px/1 'Inter',system-ui,'Segoe UI',Arial,sans-serif;">E</span>`
+  };
+
   // ── CSS injection ──
-  function injectStyles(primaryColor, position, launcherSize) {
+  function injectStyles(primaryColor, position, launcherSize, offsetBottom, offsetSide) {
     const pc = sanitizePrimaryColor(primaryColor);
-    const right = position === 'left' ? 'auto' : '28px';
-    const left  = position === 'left' ? '28px' : 'auto';
+    const right = position === 'left' ? 'auto' : offsetSide + 'px';
+    const left  = position === 'left' ? offsetSide + 'px' : 'auto';
+    // La fenêtre s'ouvre 16 px au-dessus du bouton. Plus le bouton monte, moins il reste de place :
+    // la hauteur est plafonnée pour que le haut de la fenêtre ne sorte jamais de l'écran.
+    const widgetBottom = offsetBottom + launcherSize + 16;
+    // La bulle (invitation ou libellé au survol) se place à côté du bouton, côté écran.
+    const coteBulle = position === 'left' ? 'left' : 'right';
+    const glisseDepuis = position === 'left' ? '-8px' : '8px';
 
     const css = `
       #emma-launcher {
-        position:fixed; bottom:28px; right:${right}; left:${left};
+        position:fixed; bottom:${offsetBottom}px; right:${right}; left:${left};
         width:${launcherSize}px; height:${launcherSize}px;
         border-radius:50%; background:${pc}; border:none;
+        background-image:linear-gradient(145deg,rgba(255,255,255,.24) 0%,rgba(255,255,255,0) 55%,rgba(0,0,0,.14) 100%);
         cursor:pointer; display:flex; align-items:center; justify-content:center;
-        box-shadow:0 4px 24px rgba(0,0,0,0.22);
+        box-shadow:0 6px 20px rgba(15,23,42,.24),inset 0 1px 0 rgba(255,255,255,.25);
         transition:transform .2s ease,box-shadow .2s ease; z-index:2147483646;
         font-family:inherit;
       }
-      #emma-launcher:hover { transform:scale(1.07); box-shadow:0 8px 32px rgba(0,0,0,0.3); }
+      #emma-launcher:hover { transform:scale(1.07); box-shadow:0 10px 30px rgba(15,23,42,.3),inset 0 1px 0 rgba(255,255,255,.25); }
       #emma-launcher.open .emma-icon-chat { display:none; }
       #emma-launcher.open .emma-icon-close { display:block !important; }
+      /* Halo : ne pulse que pendant l'invitation, 3 fois, puis s'arrête. */
+      #emma-launcher::before {
+        content:''; position:absolute; inset:0; border-radius:50%; background:${pc};
+        z-index:-1; opacity:0; pointer-events:none;
+      }
+      #emma-launcher.emma-attention::before { animation:emmaHalo 2.2s ease-out 3; }
+      /* Battement : lueur qui respire et onde qui s'échappe, en continu mais lent et doux.
+         Posé par le script seulement pour qui n'a pas ouvert Emma depuis 7 jours, et retiré
+         dès qu'une fenêtre de l'ERP ou le chat est ouvert. */
+      #emma-launcher.emma-battement { animation:emmaLueur 3.2s ease-in-out infinite; }
+      #emma-launcher.emma-battement::before { animation:emmaHalo 3.2s ease-out infinite; }
+      #emma-launcher.emma-battement:hover { animation:none; }
+      @keyframes emmaLueur {
+        0%, 100% { box-shadow:0 6px 20px rgba(15,23,42,.24),0 0 0 0 transparent; }
+        50% { box-shadow:0 6px 20px rgba(15,23,42,.24),0 0 22px 5px color-mix(in srgb, ${pc} 55%, transparent); }
+      }
+      @keyframes emmaHalo { 0% { transform:scale(1); opacity:.5; } 100% { transform:scale(1.8); opacity:0; } }
+      .emma-launcher-dot {
+        position:absolute; top:2px; right:2px; width:13px; height:13px; border-radius:50%;
+        background:#22C55E; border:2px solid #fff; box-sizing:border-box;
+      }
+      #emma-launcher.open .emma-launcher-dot { display:none; }
+
+      #emma-bulle {
+        position:fixed; bottom:${offsetBottom + launcherSize / 2}px; ${coteBulle}:${offsetSide + launcherSize + 14}px;
+        transform:translateY(50%);
+        max-width:min(260px, calc(100vw - ${offsetSide + launcherSize + 30}px));
+        background:#fff; color:#1F2937; border-radius:14px; padding:10px 32px 10px 14px;
+        box-shadow:0 8px 28px rgba(15,23,42,.16),0 1px 3px rgba(15,23,42,.08);
+        font:500 13.5px/1.4 'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+        cursor:pointer; z-index:2147483646; box-sizing:border-box;
+        opacity:0; translate:${glisseDepuis} 0; pointer-events:none;
+        transition:opacity .25s ease,translate .4s cubic-bezier(.34,1.56,.64,1);
+      }
+      #emma-bulle.visible { opacity:1; translate:0 0; pointer-events:auto; }
+      #emma-bulle::after {
+        content:''; position:absolute; top:50%; ${coteBulle}:-5px; width:11px; height:11px;
+        background:#fff; transform:translateY(-50%) rotate(45deg); border-radius:2px;
+      }
+      #emma-bulle.libelle { padding-right:14px; white-space:nowrap; font-weight:600; }
+      #emma-bulle.libelle .emma-bulle-fermer { display:none; }
+      .emma-bulle-texte { position:relative; z-index:1; }
+      .emma-bulle-fermer {
+        position:absolute; top:5px; right:7px; z-index:1; border:none; background:none; padding:2px 4px;
+        color:#9098A3; font-size:16px; line-height:1; cursor:pointer; font-family:inherit;
+      }
+      .emma-bulle-fermer:hover { color:#1F2937; }
+      @media (prefers-reduced-motion: reduce) {
+        #emma-launcher.emma-attention::before,
+        #emma-launcher.emma-battement::before { animation:none; }
+        #emma-launcher.emma-battement { animation:none; }
+        #emma-bulle { translate:0 0; transition:opacity .2s ease; }
+      }
 
       #emma-widget {
-        position:fixed; bottom:${launcherSize + 44}px; right:${right}; left:${left};
+        position:fixed; bottom:${widgetBottom}px; right:${right}; left:${left};
+        max-height:calc(100vh - ${widgetBottom + 16}px);
         background:#fff; border-radius:20px;
         box-shadow:0 8px 48px rgba(0,0,0,0.14),0 2px 8px rgba(0,0,0,0.06);
         display:flex; flex-direction:column; overflow:hidden;
@@ -804,12 +903,12 @@
     const launcher = document.createElement('button');
     launcher.id = 'emma-launcher';
     launcher.innerHTML = `
-      <svg class="emma-icon-chat" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-      </svg>
+      ${ICONES_BOUTON[cfg.launcherIcon] || ICONES_BOUTON.bulle}
       <svg class="emma-icon-close" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.3" style="display:none;">
         <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-      </svg>`;
+      </svg>
+      <span class="emma-launcher-dot" aria-hidden="true"></span>`;
+    launcher.setAttribute('aria-label', cfg.hoverLabel || 'Ouvrir le chat');
 
     // Widget container
     const widget = document.createElement('div');
@@ -881,6 +980,91 @@
       </div>
     `;
 
+    // ── Bulle à côté du bouton (0.8.3) ──
+    // Deux usages : le libellé au survol, et l'invitation discrète (une fois par session).
+    // Créée ici, avant toute ouverture possible : open() la referme.
+    const bulle = document.createElement('div');
+    bulle.id = 'emma-bulle';
+    bulle.setAttribute('role', 'status');
+    bulle.innerHTML = '<span class="emma-bulle-texte"></span>' +
+      '<button type="button" class="emma-bulle-fermer" aria-label="Fermer">×</button>';
+    const bulleTexte = bulle.querySelector('.emma-bulle-texte');
+    let bulleMode = null; // 'invitation' | 'libelle' | null
+    let bulleMinuteur = null;
+
+    function montrerBulle(mode, texte) {
+      if (!texte || widget.classList.contains('open')) return;
+      bulleMode = mode;
+      bulleTexte.textContent = texte;
+      bulle.classList.toggle('libelle', mode === 'libelle');
+      bulle.classList.add('visible');
+    }
+    function cacherBulle() {
+      clearTimeout(bulleMinuteur);
+      bulle.classList.remove('visible');
+      bulleMode = null;
+    }
+
+    const CLE_INVITATION_VUE = 'emma_invitation_vue';
+    const CLE_OUVERT_LE = 'emma_ouvert_le';
+    const SEPT_JOURS_MS = 7 * 24 * 60 * 60 * 1000;
+
+    function noterOuverture() {
+      try { const ls = safeGetLocalStorage(); if (ls) ls.setItem(CLE_OUVERT_LE, String(Date.now())); } catch (_) {}
+    }
+    function marquerInvitationVue() {
+      try { const ss = safeGetSessionStorage(); if (ss) ss.setItem(CLE_INVITATION_VUE, '1'); } catch (_) {}
+    }
+    /** Pas d'invitation déjà vue dans cette session, ni à qui a ouvert Emma ces 7 derniers jours. */
+    function invitationPermise() {
+      try { const ss = safeGetSessionStorage(); if (ss && ss.getItem(CLE_INVITATION_VUE)) return false; } catch (_) {}
+      try {
+        const ls = safeGetLocalStorage();
+        const t = Number(ls && ls.getItem(CLE_OUVERT_LE));
+        if (t && Date.now() - t < SEPT_JOURS_MS) return false;
+      } catch (_) {}
+      return true;
+    }
+    /** L'utilisateur est occupé : fenêtre de l'ERP ouverte, saisie en cours, onglet caché. */
+    function pageOccupee() {
+      if (document.hidden || widget.classList.contains('open')) return true;
+      if (document.body.classList.contains('modal-open')) return true;
+      if (document.querySelector('.modal.in, .modal.show, .swal2-container, .sweet-alert.showSweetAlert')) return true;
+      const actif = document.activeElement;
+      if (actif && (/^(INPUT|TEXTAREA|SELECT)$/.test(actif.tagName) || actif.isContentEditable)) return true;
+      return false;
+    }
+    function lancerInvitation(essai) {
+      if (!invitationPermise()) return;
+      if (pageOccupee()) {
+        // On repasse plus tard, une minute au plus ; au-delà, on laisse tranquille.
+        if (essai < 6) setTimeout(function () { lancerInvitation(essai + 1); }, 10000);
+        return;
+      }
+      marquerInvitationVue();
+      montrerBulle('invitation', cfg.teaserText);
+      launcher.classList.add('emma-attention');
+      setTimeout(function () { launcher.classList.remove('emma-attention'); }, 7000);
+      bulleMinuteur = setTimeout(function () { if (bulleMode === 'invitation') cacherBulle(); }, 9000);
+    }
+
+    launcher.addEventListener('mouseenter', function () {
+      if (bulleMode !== 'invitation') montrerBulle('libelle', cfg.hoverLabel);
+    });
+    launcher.addEventListener('mouseleave', function () {
+      if (bulleMode === 'libelle') cacherBulle();
+    });
+    bulle.addEventListener('click', function (e) {
+      if (e.target.closest('.emma-bulle-fermer')) {
+        marquerInvitationVue();
+        cacherBulle();
+        return;
+      }
+      cacherBulle();
+      open();
+    });
+
+    document.body.appendChild(bulle);
     document.body.appendChild(launcher);
     document.body.appendChild(widget);
 
@@ -947,6 +1131,9 @@
     }
     function open() {
       if (isSessionExpired(cfg)) newConversation('inactivite');
+      cacherBulle();
+      launcher.classList.remove('emma-attention', 'emma-battement');
+      noterOuverture();
       widget.classList.add('open');
       launcher.classList.add('open');
       persistPanelOpenWrite(true);
@@ -1759,6 +1946,32 @@
       setTimeout(open, 0);
     } else if (cfg.autoOpen && !conversationRestituee) {
       setTimeout(open, 300);
+    } else if (cfg.teaserDelayMs > 0 && cfg.teaserText) {
+      setTimeout(function () { lancerInvitation(0); }, cfg.teaserDelayMs);
+    }
+
+    // Battement continu : vérifié toutes les 2 s, pour se suspendre le temps d'une fenêtre de
+    // l'ERP ou d'une ouverture du chat. S'arrête pour de bon dès qu'Emma a été ouverte.
+    if (cfg.ambientPulse) {
+      const majBattement = function () {
+        let recent = false;
+        try {
+          const ls = safeGetLocalStorage();
+          const t = Number(ls && ls.getItem(CLE_OUVERT_LE));
+          recent = !!t && Date.now() - t < SEPT_JOURS_MS;
+        } catch (_) {}
+        if (recent) {
+          launcher.classList.remove('emma-battement');
+          clearInterval(minuteurBattement);
+          return;
+        }
+        const enPause = widget.classList.contains('open') ||
+          document.body.classList.contains('modal-open') ||
+          !!document.querySelector('.modal.in, .modal.show, .swal2-container, .sweet-alert.showSweetAlert');
+        launcher.classList.toggle('emma-battement', !enPause);
+      };
+      const minuteurBattement = setInterval(majBattement, 2000);
+      majBattement();
     }
 
     // ── Public API ──
@@ -1786,11 +1999,18 @@
       if (cfg._logoUrlFallback === cfg.logoUrl) cfg._logoUrlFallback = '';
       cfg.position = String(cfg.position || '').toLowerCase() === 'left' ? 'left' : 'right';
       cfg.launcherSize = clampNum(cfg.launcherSize, 44, 120, DEFAULTS.launcherSize);
+      cfg.offsetBottom = clampNum(cfg.offsetBottom, 0, 400, DEFAULTS.offsetBottom);
+      cfg.offsetSide = clampNum(cfg.offsetSide, 0, 400, DEFAULTS.offsetSide);
+      cfg.teaserDelayMs = clampNum(cfg.teaserDelayMs, 0, 600000, DEFAULTS.teaserDelayMs);
+      cfg.teaserText = String(cfg.teaserText == null ? '' : cfg.teaserText).trim().slice(0, 140);
+      cfg.hoverLabel = String(cfg.hoverLabel == null ? '' : cfg.hoverLabel).trim().slice(0, 60);
+      cfg.launcherIcon = Object.prototype.hasOwnProperty.call(ICONES_BOUTON, cfg.launcherIcon) ? cfg.launcherIcon : DEFAULTS.launcherIcon;
+      cfg.ambientPulse = cfg.ambientPulse === true;
       cfg.widgetWidth = clampNum(cfg.widgetWidth, 280, 560, DEFAULTS.widgetWidth);
       cfg.widgetHeight = clampNum(cfg.widgetHeight, 400, 900, DEFAULTS.widgetHeight);
       const tmo = Number(cfg.requestTimeoutMs);
       cfg.requestTimeoutMs = Number.isNaN(tmo) ? DEFAULTS.requestTimeoutMs : Math.min(600000, Math.max(0, tmo));
-      injectStyles(cfg.primaryColor, cfg.position, cfg.launcherSize);
+      injectStyles(cfg.primaryColor, cfg.position, cfg.launcherSize, cfg.offsetBottom, cfg.offsetSide);
       const api = buildWidget(cfg);
       this._api = api;
       return this;
