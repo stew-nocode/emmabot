@@ -12,3 +12,4 @@ local.config.js
 # Sauvegardes brutes de workflows n8n : contiennent le secret du chat en clair
 .n8n_chatbot_backup.json
 .n8n_*_backup.json
+.vercel

@@ -1,5 +1,5 @@
 <!-- ================================================================
-     EMMA WIDGET 0.8.4 — Snippet d'intégration ERP
+     EMMA WIDGET 0.8.5 — Snippet d'intégration ERP
      À placer dans le <head> ou juste avant </body>.
 
      0.8.1 : la persistance de la conversation entre les écrans (besoin
@@ -16,6 +16,15 @@
      (`hoverLabel`), invitation une fois par session (`teaserText`,
      `teaserDelayMs`) et battement doux (`ambientPulse`) réservé à qui
      n'a pas ouvert Emma depuis 7 jours. Rien à régler côté ERP.
+
+     0.8.5 : les QUATRE COINS. L'utilisateur fait glisser le bouton ; au
+     lâcher, il se range au coin le plus proche, et ce coin est mémorisé
+     dans son navigateur. La fenêtre de discussion s'ouvre vers le centre
+     de l'écran. Le bouton se colle au coin (16 px) et contourne tout
+     seul les barres fixes de l'ERP (barre du haut, menu latéral, replié
+     ou déplié). Seul le coin bas-droite garde ses 84 px, au-dessus des
+     boutons des fenêtres. Rien à régler côté ERP (`draggable: false`
+     pour figer).
      ================================================================ -->
 
 <!-- ─────────────────────────────────────────────────────────────────
@@ -35,7 +44,7 @@
      figée cesse de répondre à la publication suivante.
      Utiliser l'une OU l'autre, jamais les deux.
 
-     <script src="https://widget.onnext-solution.com/emma/0.8.4/emma-widget.js"></script>
+     <script src="https://widget.onnext-solution.com/emma/0.8.5/emma-widget.js"></script>
      ───────────────────────────────────────────────────────────────── -->
 
 <script>
@@ -46,12 +55,22 @@
 
     // Avatar (optionnel) : par défaut emma-avatar.png est résolu depuis l’URL d’emma-widget.js (OK cross-domain ERP).
     // Avec le chargeur, laisser cette ligne commentée : l'avatar suit automatiquement la version chargée.
-    // logoUrl: "https://widget.onnext-solution.com/emma/0.8.4/emma-avatar.png",
+    // logoUrl: "https://widget.onnext-solution.com/emma/0.8.5/emma-avatar.png",
 
-    // Nouveau (0.8.3) : distance en px entre le bouton et le bas de l'écran. Défaut 84, au-dessus
+    // Nouveau (0.8.3) : coin bas-droite, distance en px au bas de l'écran. Défaut 84, au-dessus
     // de la barre de boutons des fenêtres OBC (70 px) : rien à régler pour OBC.
-    // offsetSide règle de même la distance au bord droit (ou gauche avec position: "left").
+    // offsetSide (défaut 16) règle de même sa distance au bord droit.
     // offsetBottom: 84,
+
+    // Nouveau (0.8.5) : coin de départ, "right" (défaut) | "left" | "top-right" | "top-left".
+    // L'utilisateur peut ensuite déplacer le bouton (draggable, activé par défaut) ; son choix
+    // l'emporte sur ce réglage. Dans les autres coins, le bouton se place à cornerMargin px du
+    // bord, ou d'une barre fixe de l'ERP détectée automatiquement ; offsetTop fait de même sous
+    // la barre du haut.
+    // position: "right",
+    // draggable: true,
+    // cornerMargin: 16,
+    // offsetTop: 16,
 
     // URL du webhook n8n qui reçoit les messages du chatbot.
     webhookUrl: "VOTRE_URL_WEBHOOK_N8N",

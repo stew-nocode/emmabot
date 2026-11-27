@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  const EMMA_WIDGET_VERSION = '0.8.4';
+  const EMMA_WIDGET_VERSION = '0.8.5';
 
   // ── Already loaded guard ──
   // Nuance introduite en 0.8.2 : `loader.js` pose un TALON sur window.EmmaChat avant nous, pour
@@ -76,13 +76,23 @@
     // Texte affiché à côté des points pendant l’attente de la réponse (stream).
     typingLabel: 'En train d\'écrire…',
     suggestions: [],
-    position: 'right',       // 'right' | 'left'
+    // Coin de départ : 'right' | 'left' (en bas), 'top-right' | 'top-left' (0.8.5).
+    position: 'right',
+    // Déplacement par l'utilisateur (0.8.5) : il fait glisser le bouton, qui se range au coin le
+    // plus proche, et ce coin est mémorisé dans son navigateur (par userId si fourni). false = fixe.
+    draggable: true,
+    // Marge (px) du bouton dans un coin choisi par l'utilisateur : bord de l'écran, ou bord d'une
+    // barre fixe de l'ERP détectée automatiquement (barre du haut d'OBC 60 px, menu de gauche
+    // 60 / 250 px, mesurés le 27/11/2026). Seul le coin bas-droite garde offsetBottom, pour ne pas
+    // couvrir les boutons « Oui / Non » des fenêtres OBC, alignés à droite.
+    offsetTop: 16,
+    cornerMargin: 16,
     // Distance (px) entre le bouton et le bas / le bord de l'écran. Depuis 0.8.3, 84 par défaut :
     // la barre de boutons des fenêtres OBC occupe les 70 px du bas (mesuré le 26/11/2026), et
     // à 28 le bouton couvrait « Oui » / « Non ». Réglé ici, chez nous, pour qu'OBC n'ait rien à
     // retoucher. La fenêtre de discussion suit le bouton.
     offsetBottom: 84,
-    offsetSide: 28,
+    offsetSide: 16,
     // Invitation discrète (0.8.3) : une fois par session de navigateur, après teaserDelayMs, une
     // bulle courte apparaît à côté du bouton et le bouton pulse 3 fois, puis tout s'arrête (9 s).
     // Jamais si une fenêtre de l'ERP est ouverte, pendant une saisie, ni pour qui a ouvert Emma
@@ -91,6 +101,8 @@
     teaserText: 'Une question sur OBC ? Demandez à Emma.',
     // Libellé qui glisse à côté du bouton au survol ('' = aucun).
     hoverLabel: 'Demander à Emma',
+    // Petite ligne sous le libellé au survol, quand le bouton est déplaçable (0.8.5). '' = aucune.
+    dragHint: 'Glisser pour déplacer',
     // Icône du bouton : 'bulle' | 'etincelles' | 'bulle-etincelle' | 'aide' | 'initiale'.
     launcherIcon: 'bulle-etincelle',
     // Battement continu du bouton (lueur + onde lente). Garde-fous : seulement pour qui n'a pas
@@ -375,20 +387,42 @@
   };
 
   // ── CSS injection ──
-  function injectStyles(primaryColor, position, launcherSize, offsetBottom, offsetSide) {
+  function injectStyles(primaryColor, launcherSize) {
     const pc = sanitizePrimaryColor(primaryColor);
-    const right = position === 'left' ? 'auto' : offsetSide + 'px';
-    const left  = position === 'left' ? offsetSide + 'px' : 'auto';
-    // La fenêtre s'ouvre 16 px au-dessus du bouton. Plus le bouton monte, moins il reste de place :
-    // la hauteur est plafonnée pour que le haut de la fenêtre ne sorte jamais de l'écran.
-    const widgetBottom = offsetBottom + launcherSize + 16;
-    // La bulle (invitation ou libellé au survol) se place à côté du bouton, côté écran.
-    const coteBulle = position === 'left' ? 'left' : 'right';
-    const glisseDepuis = position === 'left' ? '-8px' : '8px';
+    // 0.8.5 : le coin n'est plus figé dans la feuille de style. Le script pose data-emma-v
+    // ('haut' | 'bas') et data-emma-h ('gauche' | 'droite') sur le bouton, la bulle et la
+    // fenêtre, plus deux distances : --emma-y (au bord haut ou bas) et --emma-x (au bord gauche
+    // ou droit). Les règles ci-dessous placent les trois éléments à partir de là.
+    // La fenêtre s'ouvre à 16 px du bouton, vers le centre de l'écran. Sa hauteur est plafonnée
+    // pour qu'elle ne sorte jamais de l'écran, quel que soit le coin.
+    const L = launcherSize;
+    const coins = `
+      #emma-launcher[data-emma-v="bas"] { bottom:var(--emma-y); top:auto; }
+      #emma-launcher[data-emma-v="haut"] { top:var(--emma-y); bottom:auto; }
+      #emma-launcher[data-emma-h="droite"] { right:var(--emma-x); left:auto; }
+      #emma-launcher[data-emma-h="gauche"] { left:var(--emma-x); right:auto; }
+
+      #emma-widget[data-emma-v="bas"] {
+        bottom:calc(var(--emma-y) + ${L + 16}px); top:auto; max-height:calc(100vh - var(--emma-y) - ${L + 32}px);
+      }
+      #emma-widget[data-emma-v="haut"] {
+        top:calc(var(--emma-y) + ${L + 16}px); bottom:auto; max-height:calc(100vh - var(--emma-y) - ${L + 32}px);
+        --emma-entree:-18px;
+      }
+      #emma-widget[data-emma-h="droite"] { right:var(--emma-x); left:auto; }
+      #emma-widget[data-emma-h="gauche"] { left:var(--emma-x); right:auto; }
+
+      #emma-bulle[data-emma-v="bas"] { bottom:calc(var(--emma-y) + ${L / 2}px); top:auto; transform:translateY(50%); }
+      #emma-bulle[data-emma-v="haut"] { top:calc(var(--emma-y) + ${L / 2}px); bottom:auto; transform:translateY(-50%); }
+      #emma-bulle[data-emma-h="droite"] { right:calc(var(--emma-x) + ${L + 14}px); left:auto; --emma-glisse:8px; }
+      #emma-bulle[data-emma-h="gauche"] { left:calc(var(--emma-x) + ${L + 14}px); right:auto; --emma-glisse:-8px; }
+      #emma-bulle[data-emma-h="droite"]::after { right:-5px; left:auto; }
+      #emma-bulle[data-emma-h="gauche"]::after { left:-5px; right:auto; }
+    `;
 
     const css = `
       #emma-launcher {
-        position:fixed; bottom:${offsetBottom}px; right:${right}; left:${left};
+        position:fixed;
         width:${launcherSize}px; height:${launcherSize}px;
         border-radius:50%; background:${pc}; border:none;
         background-image:linear-gradient(145deg,rgba(255,255,255,.24) 0%,rgba(255,255,255,0) 55%,rgba(0,0,0,.14) 100%);
@@ -422,24 +456,32 @@
         background:#22C55E; border:2px solid #fff; box-sizing:border-box;
       }
       #emma-launcher.open .emma-launcher-dot { display:none; }
+      /* Pendant le glissé (0.8.5) : le bouton suit le pointeur, sans animation ni battement. */
+      #emma-launcher { touch-action:none; }
+      #emma-launcher.emma-glisse {
+        cursor:grabbing; transition:none; animation:none; transform:scale(1.1);
+        box-shadow:0 14px 36px rgba(15,23,42,.34),inset 0 1px 0 rgba(255,255,255,.25);
+      }
+      #emma-launcher.emma-glisse::before { animation:none; }
 
       #emma-bulle {
-        position:fixed; bottom:${offsetBottom + launcherSize / 2}px; ${coteBulle}:${offsetSide + launcherSize + 14}px;
-        transform:translateY(50%);
-        max-width:min(260px, calc(100vw - ${offsetSide + launcherSize + 30}px));
+        position:fixed;
+        max-width:min(260px, calc(100vw - var(--emma-x, 16px) - ${launcherSize + 30}px));
         background:#fff; color:#1F2937; border-radius:14px; padding:10px 32px 10px 14px;
         box-shadow:0 8px 28px rgba(15,23,42,.16),0 1px 3px rgba(15,23,42,.08);
         font:500 13.5px/1.4 'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
         cursor:pointer; z-index:2147483646; box-sizing:border-box;
-        opacity:0; translate:${glisseDepuis} 0; pointer-events:none;
+        opacity:0; translate:var(--emma-glisse, 8px) 0; pointer-events:none;
         transition:opacity .25s ease,translate .4s cubic-bezier(.34,1.56,.64,1);
       }
       #emma-bulle.visible { opacity:1; translate:0 0; pointer-events:auto; }
       #emma-bulle::after {
-        content:''; position:absolute; top:50%; ${coteBulle}:-5px; width:11px; height:11px;
+        content:''; position:absolute; top:50%; width:11px; height:11px;
         background:#fff; transform:translateY(-50%) rotate(45deg); border-radius:2px;
       }
       #emma-bulle.libelle { padding-right:14px; white-space:nowrap; font-weight:600; }
+      .emma-bulle-astuce { display:none; position:relative; z-index:1; font-weight:400; font-size:11.5px; color:#6B7280; }
+      #emma-bulle.libelle .emma-bulle-astuce:not(:empty) { display:block; }
       #emma-bulle.libelle .emma-bulle-fermer { display:none; }
       .emma-bulle-texte { position:relative; z-index:1; }
       .emma-bulle-fermer {
@@ -455,15 +497,14 @@
       }
 
       #emma-widget {
-        position:fixed; bottom:${widgetBottom}px; right:${right}; left:${left};
-        max-height:calc(100vh - ${widgetBottom + 16}px);
+        position:fixed;
         background:#fff; border-radius:20px;
         box-shadow:0 8px 48px rgba(0,0,0,0.14),0 2px 8px rgba(0,0,0,0.06);
         display:flex; flex-direction:column; overflow:hidden;
         z-index:2147483645;
         font-family:'Inter',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
         font-feature-settings:'kern' 1,'liga' 1;
-        transform:scale(0.94) translateY(18px); opacity:0; pointer-events:none;
+        transform:scale(0.94) translateY(var(--emma-entree, 18px)); opacity:0; pointer-events:none;
         transition:transform .28s cubic-bezier(.34,1.56,.64,1),opacity .22s ease;
       }
       #emma-widget.open { transform:scale(1) translateY(0); opacity:1; pointer-events:all; }
@@ -721,7 +762,8 @@
 
     const style = document.createElement('style');
     style.id = 'emma-widget-styles';
-    style.textContent = css;
+    // Les règles de coin passent en dernier : à spécificité égale, elles l'emportent.
+    style.textContent = css + coins;
     document.head.appendChild(style);
 
     // Inter : lisibilité forte pour le chat (UI / longues réponses)
@@ -986,7 +1028,7 @@
     const bulle = document.createElement('div');
     bulle.id = 'emma-bulle';
     bulle.setAttribute('role', 'status');
-    bulle.innerHTML = '<span class="emma-bulle-texte"></span>' +
+    bulle.innerHTML = '<span class="emma-bulle-texte"></span><span class="emma-bulle-astuce"></span>' +
       '<button type="button" class="emma-bulle-fermer" aria-label="Fermer">×</button>';
     const bulleTexte = bulle.querySelector('.emma-bulle-texte');
     let bulleMode = null; // 'invitation' | 'libelle' | null
@@ -996,6 +1038,7 @@
       if (!texte || widget.classList.contains('open')) return;
       bulleMode = mode;
       bulleTexte.textContent = texte;
+      bulle.querySelector('.emma-bulle-astuce').textContent = mode === 'libelle' && cfg.draggable ? cfg.dragHint : '';
       bulle.classList.toggle('libelle', mode === 'libelle');
       bulle.classList.add('visible');
     }
@@ -1087,6 +1130,155 @@
       open();
     });
 
+    // ── Coin du bouton et déplacement (0.8.5) ──
+    // Le bouton, la bulle et la fenêtre portent le même coin. L'utilisateur fait glisser le
+    // bouton ; au lâcher, il se range au coin le plus proche, mémorisé pour ce navigateur.
+    const COINS = ['bas-droite', 'bas-gauche', 'haut-droite', 'haut-gauche'];
+    const cleCoin = 'emma_coin' + (cfg.userId != null && String(cfg.userId).trim() ? ':' + String(cfg.userId).trim() : '');
+    function lireCoinMemorise() {
+      if (!cfg.draggable) return null;
+      try { const ls = safeGetLocalStorage(); const c = ls && ls.getItem(cleCoin); return COINS.indexOf(c) >= 0 ? c : null; } catch (_) { return null; }
+    }
+    function memoriserCoin(coin) {
+      try { const ls = safeGetLocalStorage(); if (ls) ls.setItem(cleCoin, coin); } catch (_) {}
+    }
+    let coinActuel = null;
+    let placeActuelle = '';
+    /**
+     * Largeur (ou hauteur) qu'occupe, depuis un bord, une barre FIXE de l'ERP passant par (x, y) :
+     * barre du haut, menu latéral. Les fonds de fenêtre plein écran sont ignorés (trop larges),
+     * tout comme nos propres éléments.
+     */
+    function bordOccupe(x, y, bord) {
+      let occupe = 0;
+      let els = [];
+      try { els = document.elementsFromPoint(x, y); } catch (_) { return 0; }
+      for (let i = 0; i < els.length; i++) {
+        let n = els[i];
+        if (n.closest && n.closest('#emma-launcher, #emma-widget, #emma-bulle')) continue;
+        while (n && n !== document.body && n !== document.documentElement) {
+          if (getComputedStyle(n).position === 'fixed') {
+            const r = n.getBoundingClientRect();
+            if (bord === 'haut' && r.top <= 1 && r.height < window.innerHeight / 3) occupe = Math.max(occupe, r.bottom);
+            if (bord === 'gauche' && r.left <= 1 && r.width < largeurUtile() / 3) occupe = Math.max(occupe, r.right);
+            if (bord === 'droite' && r.right >= largeurUtile() - 1 && r.width < largeurUtile() / 3) occupe = Math.max(occupe, largeurUtile() - r.left);
+            break;
+          }
+          n = n.parentElement;
+        }
+      }
+      return Math.round(occupe);
+    }
+    /**
+     * Largeur de l'écran SANS la barre de défilement : c'est à partir de là que se mesure
+     * `right` d'un élément fixe. Sonder dans la barre de défilement ne trouve aucune barre de
+     * l'ERP (constaté dans OBC le 27/11/2026).
+     */
+    function largeurUtile() {
+      return document.documentElement.clientWidth || window.innerWidth;
+    }
+    /** Calcule les distances du coin courant et les pose sur les trois éléments. */
+    function placer() {
+      if (!coinActuel || launcher.classList.contains('emma-glisse')) return;
+      const v = coinActuel.indexOf('haut') === 0 ? 'haut' : 'bas';
+      const h = /gauche$/.test(coinActuel) ? 'gauche' : 'droite';
+      const L = cfg.launcherSize;
+      let y;
+      if (v === 'haut') {
+        // On sonde dans la colonne du bouton : c'est là qu'il ne doit rien couvrir.
+        const xSonde = h === 'gauche' ? cfg.cornerMargin + L / 2 : largeurUtile() - cfg.cornerMargin - L / 2;
+        y = bordOccupe(xSonde, 2, 'haut') + cfg.offsetTop;
+      } else {
+        y = coinActuel === 'bas-droite' ? cfg.offsetBottom : cfg.cornerMargin;
+      }
+      const yCentre = v === 'haut' ? y + L / 2 : window.innerHeight - y - L / 2;
+      const x = (h === 'gauche' ? bordOccupe(2, yCentre, 'gauche') : bordOccupe(largeurUtile() - 2, yCentre, 'droite')) +
+        (coinActuel === 'bas-droite' ? cfg.offsetSide : cfg.cornerMargin);
+      const cle = x + ',' + y;
+      if (cle === placeActuelle) return;
+      placeActuelle = cle;
+      [launcher, bulle, widget].forEach(function (el) {
+        el.style.setProperty('--emma-x', x + 'px');
+        el.style.setProperty('--emma-y', y + 'px');
+      });
+    }
+    function appliquerCoin(coin) {
+      coinActuel = COINS.indexOf(coin) >= 0 ? coin : 'bas-droite';
+      const v = coinActuel.indexOf('haut') === 0 ? 'haut' : 'bas';
+      const h = /gauche$/.test(coinActuel) ? 'gauche' : 'droite';
+      [launcher, bulle, widget].forEach(function (el) {
+        el.setAttribute('data-emma-v', v);
+        el.setAttribute('data-emma-h', h);
+      });
+      placeActuelle = '';
+      placer();
+    }
+    appliquerCoin(lireCoinMemorise() || cfg.position);
+    // Une barre de l'ERP peut changer de taille (menu replié / déplié, écran redimensionné).
+    setInterval(placer, 1500);
+    window.addEventListener('resize', placer);
+
+    // Un glissé de moins de 8 px reste un clic ; au-delà, le clic qui suit le lâcher est ignoré.
+    const SEUIL_GLISSE_PX = 8;
+    let glisse = null;
+    let ignorerClic = false;
+    function borne(n, min, max) { return Math.min(max, Math.max(min, n)); }
+    if (cfg.draggable) {
+      launcher.addEventListener('pointerdown', function (e) {
+        if (e.button !== 0) return;
+        const r = launcher.getBoundingClientRect();
+        glisse = { id: e.pointerId, x0: e.clientX, y0: e.clientY, dx: e.clientX - r.left, dy: e.clientY - r.top, actif: false };
+        // Capture dès l'appui : un geste vif sort du bouton avant d'atteindre le seuil, et sans
+        // capture les mouvements suivants (et le lâcher) ne nous parviendraient plus.
+        try { launcher.setPointerCapture(e.pointerId); } catch (_) {}
+      });
+      launcher.addEventListener('pointermove', function (e) {
+        if (!glisse || e.pointerId !== glisse.id) return;
+        if (!glisse.actif) {
+          if (Math.hypot(e.clientX - glisse.x0, e.clientY - glisse.y0) < SEUIL_GLISSE_PX) return;
+          glisse.actif = true;
+          launcher.classList.add('emma-glisse');
+          cacherBulle();
+          // La fenêtre ouverte s'efface pendant le glissé et réapparaît au nouveau coin.
+          widget.style.visibility = 'hidden';
+        }
+        e.preventDefault();
+        const taille = launcher.offsetWidth;
+        launcher.style.left = borne(e.clientX - glisse.dx, 0, window.innerWidth - taille) + 'px';
+        launcher.style.top = borne(e.clientY - glisse.dy, 0, window.innerHeight - taille) + 'px';
+        launcher.style.right = 'auto';
+        launcher.style.bottom = 'auto';
+      });
+      const finGlisse = function (e) {
+        if (!glisse || e.pointerId !== glisse.id) return;
+        const g = glisse;
+        glisse = null;
+        if (!g.actif) return;
+        ignorerClic = true;
+        setTimeout(function () { ignorerClic = false; }, 400);
+        const avant = launcher.getBoundingClientRect();
+        const cx = avant.left + avant.width / 2;
+        const cy = avant.top + avant.height / 2;
+        const coin = (cy < window.innerHeight / 2 ? 'haut' : 'bas') + '-' + (cx < window.innerWidth / 2 ? 'gauche' : 'droite');
+        launcher.classList.remove('emma-glisse');
+        launcher.style.left = launcher.style.top = launcher.style.right = launcher.style.bottom = '';
+        appliquerCoin(coin);
+        memoriserCoin(coin);
+        widget.style.visibility = '';
+        // Glissement jusqu'au coin : on part de la position lâchée et on revient à zéro.
+        const apres = launcher.getBoundingClientRect();
+        launcher.style.transition = 'none';
+        launcher.style.transform = 'translate(' + (avant.left - apres.left) + 'px,' + (avant.top - apres.top) + 'px)';
+        void launcher.offsetWidth;
+        launcher.style.transition = 'transform .35s cubic-bezier(.34,1.56,.64,1)';
+        launcher.style.transform = '';
+        setTimeout(function () { launcher.style.transition = ''; }, 400);
+      };
+      launcher.addEventListener('pointerup', finGlisse);
+      launcher.addEventListener('pointercancel', finGlisse);
+      launcher.addEventListener('lostpointercapture', finGlisse);
+    }
+
     document.body.appendChild(bulle);
     document.body.appendChild(launcher);
     document.body.appendChild(widget);
@@ -1136,7 +1328,10 @@
       row.appendChild(wrap);
     }
 
-    launcher.addEventListener('click', () => toggle());
+    launcher.addEventListener('click', () => {
+      if (ignorerClic) { ignorerClic = false; return; }
+      toggle();
+    });
     widget.querySelector('#emma-close').addEventListener('click', () => close());
     widget.querySelector('#emma-new').addEventListener('click', () => newConversation('bouton'));
     widget.querySelector('#emma-start').addEventListener('click', () => startChat());
@@ -2018,20 +2213,30 @@
       } catch (_) {}
       cfg.logoUrl = sanitizeImageUrl(resolveLogoUrl(cfg.logoUrl), DEFAULTS.logoUrl);
       if (cfg._logoUrlFallback === cfg.logoUrl) cfg._logoUrlFallback = '';
-      cfg.position = String(cfg.position || '').toLowerCase() === 'left' ? 'left' : 'right';
+      // Coin de départ : 'right' / 'left' restent compris (en bas), comme avant 0.8.5.
+      const pos = String(cfg.position || '').toLowerCase().replace(/_/g, '-');
+      cfg.position = ({
+        'left': 'bas-gauche', 'bottom-left': 'bas-gauche', 'bas-gauche': 'bas-gauche',
+        'top-right': 'haut-droite', 'haut-droite': 'haut-droite',
+        'top-left': 'haut-gauche', 'haut-gauche': 'haut-gauche'
+      })[pos] || 'bas-droite';
+      cfg.draggable = cfg.draggable !== false;
+      cfg.offsetTop = clampNum(cfg.offsetTop, 0, 400, DEFAULTS.offsetTop);
+      cfg.cornerMargin = clampNum(cfg.cornerMargin, 0, 200, DEFAULTS.cornerMargin);
       cfg.launcherSize = clampNum(cfg.launcherSize, 44, 120, DEFAULTS.launcherSize);
       cfg.offsetBottom = clampNum(cfg.offsetBottom, 0, 400, DEFAULTS.offsetBottom);
       cfg.offsetSide = clampNum(cfg.offsetSide, 0, 400, DEFAULTS.offsetSide);
       cfg.teaserDelayMs = clampNum(cfg.teaserDelayMs, 0, 600000, DEFAULTS.teaserDelayMs);
       cfg.teaserText = String(cfg.teaserText == null ? '' : cfg.teaserText).trim().slice(0, 140);
       cfg.hoverLabel = String(cfg.hoverLabel == null ? '' : cfg.hoverLabel).trim().slice(0, 60);
+      cfg.dragHint = String(cfg.dragHint == null ? '' : cfg.dragHint).trim().slice(0, 60);
       cfg.launcherIcon = Object.prototype.hasOwnProperty.call(ICONES_BOUTON, cfg.launcherIcon) ? cfg.launcherIcon : DEFAULTS.launcherIcon;
       cfg.ambientPulse = cfg.ambientPulse === true;
       cfg.widgetWidth = clampNum(cfg.widgetWidth, 280, 560, DEFAULTS.widgetWidth);
       cfg.widgetHeight = clampNum(cfg.widgetHeight, 400, 900, DEFAULTS.widgetHeight);
       const tmo = Number(cfg.requestTimeoutMs);
       cfg.requestTimeoutMs = Number.isNaN(tmo) ? DEFAULTS.requestTimeoutMs : Math.min(600000, Math.max(0, tmo));
-      injectStyles(cfg.primaryColor, cfg.position, cfg.launcherSize, cfg.offsetBottom, cfg.offsetSide);
+      injectStyles(cfg.primaryColor, cfg.launcherSize);
       const api = buildWidget(cfg);
       this._api = api;
       return this;
